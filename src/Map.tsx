@@ -1,7 +1,5 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import './Map.css'
-
-import { generateRandomPoints } from './Gdata';
 
 declare global {
   interface Window {
@@ -11,6 +9,8 @@ declare global {
 
 type Props = {
   currentDate: string;
+  deckOverlay: any;
+  onZoomChange?: (zoom: number) => void;
 };
 
 type MaplibreGL = {
@@ -19,101 +19,63 @@ type MaplibreGL = {
   addSource: Function;
   addLayer: Function;
   getSource: Function;
+  addControl: Function;
+  loaded: Function;
+  getZoom: Function;
 }
 
 function Map(props: Props) {
-
   const ref = useRef<HTMLDivElement | null>(null);
-  const map = useRef<MaplibreGL | null>(null)
-
-  const updateFeatures = (map: MaplibreGL) => {
-    const source = map.getSource('gdata');
-
-    if (source) {
-      const geojson = generateRandomPoints(map.getBounds().toArray(), 1000);
-      source.setData(geojson);
-    }
-  }
+  const map = useRef<MaplibreGL | null>(null);
+  const [mapLoaded, setMapLoaded] = useState(false);
 
   useEffect(() => {
-    if (! ref.current) {
+    if (!ref.current) {
       return;
     }
 
     map.current = new window.geolonia.Map({
       container: ref.current,
-      center: [ 139.741357, 35.658099 ], // TODO: とりあえず日本経緯度原点、初期値の設定が必要
+      center: [139.741357, 35.658099],
       zoom: 10,
       hash: true,
       style: "geolonia/gsi",
-    })
-  }, [ref.current])
+    });
 
-  useEffect(() => {
-    if (! map.current) {
-      return;
-    }
-
-    map.current.on('load', () => {
-      if (! map.current) {
-        return;
-      }
-
-      if (!map.current.getSource('gdata')) {
-        map.current.addSource('gdata', {type: 'geojson', data: {
-          "type": "FeatureCollection",
-          "features": []
-        }});
-
-        // TODO: 以下ヒートマップ用スタイル。`heatmap-density` を外部ファイルにする？
-        map.current.addLayer({
-          "id": "overlay-heat",
-          "type": "heatmap",
-          "source": "gdata",
-          "paint": {
-            "heatmap-color": [
-              "interpolate",
-              ["linear"],
-              ["heatmap-density"],
-              0,
-              'rgba(33,102,172,0)',
-              0.2,
-              'rgb(103,169,207)',
-              0.4,
-              'rgb(209,229,240)',
-              0.6,
-              'rgb(253,219,199)',
-              0.8,
-              'rgb(239,138,98)',
-              1,
-              'rgb(178,24,43)'
-            ],
-            "heatmap-weight": 1,
-            "heatmap-intensity": 1,
-            "heatmap-opacity": 0.5
+    if (map.current) {
+      map.current.on('load', () => {
+        console.log('Map loaded');
+        setMapLoaded(true);
+        
+        // 初期ズームレベルを親コンポーネントに通知
+        if (props.onZoomChange) {
+          const initialZoom = map.current?.getZoom();
+          if (initialZoom !== undefined) {
+            props.onZoomChange(initialZoom);
           }
-        }, 'poi');
-
-        updateFeatures(map.current);
-      }
-    })
-
-    map.current.on('moveend', () => {
-      if (! map.current) {
-        return;
-      }
-
-      updateFeatures(map.current);
-    })
-  }, [map.current])
+        }
+      });
+      
+      // ズームが変更されたときのイベントハンドラ
+      map.current.on('zoom', () => {
+        if (props.onZoomChange && map.current) {
+          const zoom = map.current.getZoom();
+          console.log('Zoom changed:', zoom);
+          props.onZoomChange(zoom);
+        }
+      });
+    }
+  }, []);
 
   useEffect(() => {
-    if (! map.current) {
+    if (!map.current || !props.deckOverlay || !mapLoaded) {
       return;
     }
-
-    updateFeatures(map.current);
-  }, [props.currentDate]);
+    
+    console.log('Adding deck overlay to map');
+    map.current.addControl(props.deckOverlay);
+    
+  }, [props.deckOverlay, mapLoaded]);
 
   return (
     <>

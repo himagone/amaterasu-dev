@@ -1,56 +1,107 @@
+.datetime {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  animation: slideUp 0.5s ease-out;
+}
+
 .datetime input {
-  font-size: 1.2rem;
-  outline: none;
-  margin-right: 8px;
-  outline: none;
-  background-color: #444;
-  box-shadow: none;
+  padding: 5px;
   border: 1px solid #ccc;
-  border-radius: 8px;
-  padding: 0 8px;
-  color: #ffffff;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
-.datetime input::-webkit-calendar-picker-indicator {
-  margin-left: 8px;
-}
-
-.datetime .player
-{
-  margin-left: 4px;
-  white-space: nowrap;
-  display: block;
-  padding: 8px 0 0 0;
-}
-
-.datetime .player button
-{
-  font-size: 1rem;
-  padding: 4px 8px;
-  color: #ffffff;
+.datetime input:focus {
+  border-color: #2196F3;
+  box-shadow: 0 0 8px rgba(33, 150, 243, 0.5);
   outline: none;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  margin-left: 4px;
 }
 
-.datetime .player button:first-child
-{
-  margin-left: 0;
+.player {
+  display: flex;
+  gap: 5px;
 }
 
-.datetime .player button
-{
+.player button {
   background-color: transparent;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  position: relative;
+  overflow: hidden;
 }
 
-.datetime .player button:hover
-{
-  border: 1px solid #fff;
+.player button:hover {
+  background-color: #f5f5f5;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
 }
 
-.datetime .player button:active
-{
-  background-color: #555;
-  border: 1px solid #fff;
+.player button:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.player button.active {
+  background-color: #2196F3 !important;
+  color: white;
+  border-color: #2196F3;
+  animation: pulse 2s infinite;
+}
+
+.player button svg {
+  transition: transform 0.3s ease;
+}
+
+.player button:hover svg {
+  transform: scale(1.2);
+}
+
+/* アニメーションキーフレーム */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(33, 150, 243, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(33, 150, 243, 0);
+  }
+}
+
+/* 時間更新時のトランジション */
+.time-update {
+  animation: fadeInOut 0.5s ease-in-out;
+}
+
+@keyframes fadeInOut {
+  0% {
+    opacity: 0.5;
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }

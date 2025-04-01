@@ -75,3 +75,272 @@ a {
     text-align: center;
   }
 }
+
+.app {
+  width: 100%;
+  height: 100vh;
+  position: relative;
+}
+
+.datetime-container {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1;
+  background-color: rgba(255, 255, 255, 0.8);
+  padding: 10px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.visualization-controls {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 15px 20px;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  transition: all 0.3s ease;
+  animation: fadeIn 0.5s ease-out;
+}
+
+.visualization-controls:hover {
+  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.2);
+  transform: translateX(-50%) translateY(-5px);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.hexagon-enter {
+  animation: hexagonEnter 0.8s ease-out;
+}
+
+@keyframes hexagonEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.data-update-indicator {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: rgba(33, 150, 243, 0.9);
+  color: white;
+  padding: 8px 15px;
+  border-radius: 20px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  transform-origin: center right;
+  animation: slideInRight 0.5s ease-out, fadeOut 0.5s ease-in 2.5s forwards;
+  font-weight: 500;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.data-update-indicator::before {
+  content: "";
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: white;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+/* パーソンカウントフィルター */
+.person-count-filter {
+  position: absolute;
+  top: 70px;
+  right: 20px;
+  z-index: 10;
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 15px;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  max-width: 300px;
+  animation: slideInRight 0.5s ease-out;
+  transition: all 0.3s ease;
+}
+
+.person-count-filter.collapsed {
+  max-height: 50px;
+  overflow: hidden;
+}
+
+.person-count-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+
+.person-count-filter h3 {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+  color: #333;
+  text-align: center;
+}
+
+.toggle-panel-btn {
+  background: none;
+  border: none;
+  color: #555;
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform 0.3s ease;
+}
+
+.person-count-content {
+  margin-top: 10px;
+}
+
+.person-count-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+
+.person-count-btn {
+  padding: 6px 10px;
+  border-radius: 20px;
+  border: 2px solid;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 80px;
+}
+
+.person-count-btn .person-count-name {
+  flex: 1;
+}
+
+.person-count-btn .person-count-count {
+  background-color: rgba(255, 255, 255, 0.7);
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: bold;
+}
+
+.person-count-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.person-count-btn.active {
+  font-weight: bold;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.person-count-btn.active::before {
+  content: "✓";
+  margin-right: 4px;
+  font-weight: bold;
+}
+
+.person-count-legend {
+  margin-top: 15px;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  padding-top: 10px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 5px;
+  padding: 5px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.legend-item:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.color-sample {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  margin-right: 8px;
+}
+
+.legend-details {
+  display: flex;
+  flex-direction: column;
+  font-size: 12px;
+}
+
+.legend-name {
+  font-weight: 500;
+}
+
+.legend-count {
+  color: #666;
+  font-size: 10px;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
