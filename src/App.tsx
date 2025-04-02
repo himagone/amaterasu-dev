@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import Header from './Header.tsx'
 import Map from './Map.tsx'
 import './App.css'
@@ -10,6 +10,8 @@ import { MapboxOverlay } from '@deck.gl/mapbox';
 import Papa from 'papaparse'
 import DateTime from './DateTime'
 import { easeCubic } from 'd3-ease';
+import { ArcLayer } from '@deck.gl/layers';
+import { cellToLatLng } from 'h3-js';
 
 // CSV の各行の型
 type LocationData = {
@@ -17,6 +19,14 @@ type LocationData = {
   h3_index: string;     // H3 インデックス
   person_count: number; // 人数カウント
 };
+
+type FlowData = {
+  time: string;
+  from_h3: string;
+  to_h3: string;
+  move_count: number;
+};
+
 
 const now = new Date();
 // パーソンカウントの定義（範囲ごとに色分け）
@@ -44,10 +54,10 @@ enum ZoomLevel {
 }
 
 function getZoomLevelFile(zoom: number): string {
-  if (zoom < 9) return `/kepler_output_test_${ZoomLevel.Low}.csv`;
-  if (zoom < 12) return `/kepler_output_test_${ZoomLevel.Medium}.csv`;
-  if (zoom < 15) return `/kepler_output_test_${ZoomLevel.High}.csv`;
-  return `/kepler_output_test_${ZoomLevel.Detail}.csv`;
+  if (zoom < 9) return `/output_test_${ZoomLevel.Low}.csv`;
+  if (zoom < 12) return `/output_test_${ZoomLevel.Medium}.csv`;
+  if (zoom < 15) return `/output_test_${ZoomLevel.High}.csv`;
+  return `/output_test_${ZoomLevel.Detail}.csv`;
 }
 
 // WebGL照明エフェクトの設定
@@ -80,6 +90,7 @@ function App() {
   const [currentCsvFile, setCurrentCsvFile] = useState<string>(getZoomLevelFile(10));
   const [availableTimes, setAvailableTimes] = useState<Set<string>>(new Set());
   const [personCountRanges, setPersonCountRanges] = useState<PersonCountRange[]>(defaultPersonCountRanges);
+  const [flowData, setFlowData] = useState<FlowData[]>([]);
   const [viewState, setViewState] = useState({
     longitude: 139.741357,
     latitude: 35.658099,
@@ -128,24 +139,46 @@ function App() {
         setData(results.data);
       })
       .catch(err => console.error('CSV読み込みエラー:', err));
+    fetch(currentCsvFile.replace('.csv', '_flows.csv')) // flowsファイルを読み込み
+      .then(response => response.text())
+      .then(csv => {
+        const results = Papa.parse<FlowData>(csv, {
+          header: true,
+          dynamicTyping: true,
+          skipEmptyLines: true,
+        });
+        setFlowData(results.data);
+      })
+      .catch(err => console.warn('移動データの読み込みに失敗:', err));
   }, [currentCsvFile]);
 
   // 現在時刻までのデータにフィルタリング - 蓄積ではなく正確な時間帯のみ表示
-  const filteredData = data.filter(d => {
-    // 時間フィルタリング
-    const dataTime = new Date(d.time);
-    const timeMatch = (
-      dataTime.getFullYear() === currentDateTime.getFullYear() &&
-      dataTime.getMonth() === currentDateTime.getMonth() &&
-      dataTime.getDate() === currentDateTime.getDate() &&
-      dataTime.getHours() === currentDateTime.getHours() &&
-      dataTime.getMinutes() === currentDateTime.getMinutes()
-    );
-    
-    // すべての人数範囲を有効にする（パネルを削除したため）
-    return timeMatch;
-  });
-  
+  const filteredData = useMemo(() => {
+    return data.filter(d => {
+      const dataTime = new Date(d.time);
+      return (
+        dataTime.getFullYear() === currentDateTime.getFullYear() &&
+        dataTime.getMonth() === currentDateTime.getMonth() &&
+        dataTime.getDate() === currentDateTime.getDate() &&
+        dataTime.getHours() === currentDateTime.getHours() &&
+        dataTime.getMinutes() === currentDateTime.getMinutes()
+      );
+    });
+  }, [data, currentDateTime]);
+
+  const filteredFlowData = useMemo(() => {
+    return flowData.filter(d => {
+      const dataTime = new Date(d.time);
+      return (
+        dataTime.getFullYear() === currentDateTime.getFullYear() &&
+        dataTime.getMonth() === currentDateTime.getMonth() &&
+        dataTime.getDate() === currentDateTime.getDate() &&
+        dataTime.getHours() === currentDateTime.getHours() &&
+        dataTime.getMinutes() === currentDateTime.getMinutes()
+      );
+    });
+  }, [flowData, currentDateTime]);
+
   // deck.gl の H3HexagonLayer を設定
   useEffect(() => {
     const newLayers = [
@@ -154,14 +187,13 @@ function App() {
         data: filteredData,
         getHexagon: (d: LocationData) => d.h3_index,
         getFillColor: (d: LocationData) => {
-          // パーソンカウント範囲に基づいて色を設定
           const range = personCountRanges.find(range => 
             d.person_count >= range.min && d.person_count <= range.max
           );
-          return range ? range.color : [100, 100, 100, 200]; // デフォルト色
+          return range ? range.color : [100, 100, 100, 200];
         },
         extruded: true,
-        elevationScale: 15,
+        elevationScale: 1,
         material: materialProps,
         pickable: true,
         opacity: 0.8,
@@ -183,7 +215,6 @@ function App() {
         },
         autoHighlight: true,
         highlightColor: [255, 255, 255, 100],
-        // カーソルが乗った時の情報表示
         onHover: (info: any) => {
           if (info.object) {
             const personCount = info.object.person_count;
@@ -193,8 +224,7 @@ function App() {
       })
     ];
     setLayers(newLayers);
-  }, [filteredData, personCountRanges]);
-
+  }, [filteredData, personCountRanges, currentDateTime]);
 
   useEffect(() => {
     if (deckOverlayRef.current) {
@@ -205,6 +235,60 @@ function App() {
     }
   }, [layers]);
   
+
+  useEffect(() => {
+    const newLayers = [
+      new H3HexagonLayer({
+        id: 'h3-hexagon-layer',
+        data: filteredData,
+        getHexagon: (d: LocationData) => d.h3_index,
+        getFillColor: (d: LocationData) => {
+          const range = personCountRanges.find(range => 
+            d.person_count >= range.min && d.person_count <= range.max
+          );
+          return range ? range.color : [100, 100, 100, 200];
+        },
+        extruded: true,
+        elevationScale: 1,
+        material: materialProps,
+        pickable: true,
+        opacity: 0.8,
+        coverage: 0.9,
+        getElevation: (d: LocationData) => d.person_count * 15,
+        transitions: {
+          getElevation: { duration: 1000, easing: easeCubic },
+          getFillColor: { duration: 800, easing: easeCubic }
+        },
+        updateTriggers: {
+          getFillColor: [currentDateTime, personCountRanges],
+          getElevation: [currentDateTime]
+        },
+        autoHighlight: true,
+        highlightColor: [255, 255, 255, 100],
+      }),
+  
+      new ArcLayer({
+        id: 'arc-layer',
+        data: filteredFlowData,
+        getSourcePosition: d => {
+          const [lat, lon] = cellToLatLng(d.from_h3);
+          return [lon, lat]; // deck.gl は [lng, lat]
+        },
+        getTargetPosition: d => {
+          const [lat, lon] = cellToLatLng(d.to_h3);
+          return [lon, lat];
+        },
+        getSourceColor: [0, 128, 255],
+        getTargetColor: [255, 0, 0],
+        getWidth: d => Math.min(Math.max(d.move_count / 2, 1), 10),
+        opacity: 0.6,
+        pickable: true,
+        autoHighlight: true,
+        highlightColor: [255, 255, 255, 100],
+      })
+    ];
+    setLayers(newLayers);
+  }, [filteredData, filteredFlowData, personCountRanges, currentDateTime]);
   // ズームレベルが変更された時のハンドラー
   const handleZoomChange = (zoom: number) => {
     setCurrentZoom(zoom);
