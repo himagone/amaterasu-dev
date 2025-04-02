@@ -3,7 +3,6 @@ import Header from './Header.tsx'
 import Map from './Map.tsx'
 import './App.css'
 import Weather from './Weather.tsx'
-import DeckGL from '@deck.gl/react'
 import { H3HexagonLayer } from '@deck.gl/geo-layers'
 import { LightingEffect, AmbientLight, DirectionalLight, FlyToInterpolator } from '@deck.gl/core'
 import { MapboxOverlay } from '@deck.gl/mapbox';
@@ -19,14 +18,6 @@ type LocationData = {
   h3_index: string;     // H3 インデックス
   person_count: number; // 人数カウント
 };
-
-type FlowData = {
-  time: string;
-  from_h3: string;
-  to_h3: string;
-  move_count: number;
-};
-
 
 const now = new Date();
 // パーソンカウントの定義（範囲ごとに色分け）
@@ -90,7 +81,6 @@ function App() {
   const [currentCsvFile, setCurrentCsvFile] = useState<string>(getZoomLevelFile(10));
   const [availableTimes, setAvailableTimes] = useState<Set<string>>(new Set());
   const [personCountRanges, setPersonCountRanges] = useState<PersonCountRange[]>(defaultPersonCountRanges);
-  const [flowData, setFlowData] = useState<FlowData[]>([]);
   const [viewState, setViewState] = useState({
     longitude: 139.741357,
     latitude: 35.658099,
@@ -139,17 +129,6 @@ function App() {
         setData(results.data);
       })
       .catch(err => console.error('CSV読み込みエラー:', err));
-    fetch(currentCsvFile.replace('.csv', '_flows.csv')) // flowsファイルを読み込み
-      .then(response => response.text())
-      .then(csv => {
-        const results = Papa.parse<FlowData>(csv, {
-          header: true,
-          dynamicTyping: true,
-          skipEmptyLines: true,
-        });
-        setFlowData(results.data);
-      })
-      .catch(err => console.warn('移動データの読み込みに失敗:', err));
   }, [currentCsvFile]);
 
   // 現在時刻までのデータにフィルタリング - 蓄積ではなく正確な時間帯のみ表示
@@ -166,19 +145,6 @@ function App() {
     });
   }, [data, currentDateTime]);
 
-  const filteredFlowData = useMemo(() => {
-    return flowData.filter(d => {
-      const dataTime = new Date(d.time);
-      return (
-        dataTime.getFullYear() === currentDateTime.getFullYear() &&
-        dataTime.getMonth() === currentDateTime.getMonth() &&
-        dataTime.getDate() === currentDateTime.getDate() &&
-        dataTime.getHours() === currentDateTime.getHours() &&
-        dataTime.getMinutes() === currentDateTime.getMinutes()
-      );
-    });
-  }, [flowData, currentDateTime]);
-
   // deck.gl の H3HexagonLayer を設定
   useEffect(() => {
     const newLayers = [
@@ -194,18 +160,30 @@ function App() {
         },
         extruded: true,
         elevationScale: 1,
-        material: materialProps,
+        material: {
+          ...materialProps,
+          ambient: 0.6,
+          diffuse: 0.7,
+          shininess: 40,
+          specularColor: [60, 60, 60]
+        },
         pickable: true,
-        opacity: 0.8,
-        coverage: 0.9,
-        getElevation: (d: LocationData) => d.person_count * 15,
+        opacity: 0.85,
+        coverage: 0.95,
+        getElevation: (d: LocationData) => {
+          // より自然な高さの変化を実現
+          const baseHeight = d.person_count * 20;
+          // 時間に基づく微細な変化を追加
+          const timeBasedVariation = Math.sin(currentDateTime.getTime() / 5000) * 5;
+          return baseHeight + timeBasedVariation;
+        },
         transitions: {
           getElevation: {
-            duration: 1000,
+            duration: 2000,
             easing: easeCubic
           },
           getFillColor: {
-            duration: 800,
+            duration: 1000,
             easing: easeCubic
           }
         },
@@ -214,11 +192,12 @@ function App() {
           getElevation: [currentDateTime]
         },
         autoHighlight: true,
-        highlightColor: [255, 255, 255, 100],
+        highlightColor: [255, 255, 255, 150],
         onHover: (info: any) => {
           if (info.object) {
             const personCount = info.object.person_count;
-            console.log(`人数: ${personCount || '不明'}`);
+            const [lat, lng] = cellToLatLng(info.object.h3_index);
+            console.log(`位置: ${lat.toFixed(6)}, ${lng.toFixed(6)}, 人数: ${personCount || '不明'}`);
           }
         }
       })
@@ -235,60 +214,6 @@ function App() {
     }
   }, [layers]);
   
-
-  useEffect(() => {
-    const newLayers = [
-      new H3HexagonLayer({
-        id: 'h3-hexagon-layer',
-        data: filteredData,
-        getHexagon: (d: LocationData) => d.h3_index,
-        getFillColor: (d: LocationData) => {
-          const range = personCountRanges.find(range => 
-            d.person_count >= range.min && d.person_count <= range.max
-          );
-          return range ? range.color : [100, 100, 100, 200];
-        },
-        extruded: true,
-        elevationScale: 1,
-        material: materialProps,
-        pickable: true,
-        opacity: 0.8,
-        coverage: 0.9,
-        getElevation: (d: LocationData) => d.person_count * 15,
-        transitions: {
-          getElevation: { duration: 1000, easing: easeCubic },
-          getFillColor: { duration: 800, easing: easeCubic }
-        },
-        updateTriggers: {
-          getFillColor: [currentDateTime, personCountRanges],
-          getElevation: [currentDateTime]
-        },
-        autoHighlight: true,
-        highlightColor: [255, 255, 255, 100],
-      }),
-  
-      new ArcLayer({
-        id: 'arc-layer',
-        data: filteredFlowData,
-        getSourcePosition: d => {
-          const [lat, lon] = cellToLatLng(d.from_h3);
-          return [lon, lat]; // deck.gl は [lng, lat]
-        },
-        getTargetPosition: d => {
-          const [lat, lon] = cellToLatLng(d.to_h3);
-          return [lon, lat];
-        },
-        getSourceColor: [0, 128, 255],
-        getTargetColor: [255, 0, 0],
-        getWidth: d => Math.min(Math.max(d.move_count / 2, 1), 10),
-        opacity: 0.6,
-        pickable: true,
-        autoHighlight: true,
-        highlightColor: [255, 255, 255, 100],
-      })
-    ];
-    setLayers(newLayers);
-  }, [filteredData, filteredFlowData, personCountRanges, currentDateTime]);
   // ズームレベルが変更された時のハンドラー
   const handleZoomChange = (zoom: number) => {
     setCurrentZoom(zoom);
@@ -302,20 +227,16 @@ function App() {
   
   // 時間が変更されたときの視覚効果
   useEffect(() => {
-    // カメラアングルを少し変更して動きを出す
+    // カメラの動きをより自然に
     setViewState(prevState => {
       const newPitch = prevState.pitch === 30 ? 35 : 30;
-      const newBearing = (prevState.bearing + 5) % 360;
-      // 変更がある場合のみ更新
-      if (newPitch !== prevState.pitch || newBearing !== prevState.bearing) {
-        return {
-          ...prevState,
-          pitch: newPitch,
-          bearing: newBearing,
-          transitionDuration: 1500
-        };
-      }
-      return prevState;
+      const newBearing = (prevState.bearing + 2) % 360; // 回転速度を遅く
+      return {
+        ...prevState,
+        pitch: newPitch,
+        bearing: newBearing,
+        transitionDuration: 2000 // アニメーション時間を長く
+      };
     });
   }, [currentDateTime]);
   
