@@ -11,9 +11,9 @@ const day = today.getDate().toString().padStart(2, '0');
 const hour = today.getHours().toString().padStart(2, '0');
 const min = today.getMinutes().toString().padStart(2, '0');
 
-const minDate = '2020-11-01'; // TODO: 設定ファイルをつくる？
-const normalInterval = 3000; // 通常再生速度: 3秒
-const fastInterval = 1000;   // 高速再生速度: 1秒
+const minDate = '2020-11-01';
+const normalInterval = 3000;
+const fastInterval = 1000;
 
 const maxDate = `${year}-${month}-${day}`;
 
@@ -42,11 +42,8 @@ function DateTime(props: Props) {
   // 時間が更新されたときのアニメーション
   useEffect(() => {
     if (isUpdating) {
-      // アニメーションのトリガー
       if (timeDisplayRef.current) {
         timeDisplayRef.current.classList.add('time-update');
-        
-        // アニメーション終了後にクラスを削除
         setTimeout(() => {
           if (timeDisplayRef.current) {
             timeDisplayRef.current.classList.remove('time-update');
@@ -67,23 +64,18 @@ function DateTime(props: Props) {
     setActiveButton(null);
   }
 
-  // 単一ステップ（非周期的）
   const playSingleStep = (direction: number) => {
     resetButtonColor();
     if (timer) clearInterval(timer);
-    
     const current = new Date(props.currentDate);
     current.setMinutes(current.getMinutes() + direction);
     props.setDateTime(current.toString());
     updateDateTimeDisplay(current);
   }
   
-  // 周期的再生（通常スピード）
   const playNormal = (direction: number, buttonIndex: number) => {
     resetButtonColor();
     if (timer) clearInterval(timer);
-    
-    // ボタンをアクティブに
     setActiveButton(buttonIndex);
     if (ref.current) {
       const buttons = ref.current.querySelectorAll('.player button');
@@ -124,16 +116,11 @@ function DateTime(props: Props) {
       }
     }
     
-    // 最初のステップを即座に実行
     const current = new Date(props.currentDate);
     current.setMinutes(current.getMinutes() + direction);
     props.setDateTime(current.toString());
     updateDateTimeDisplay(current);
-    
-    // 現在の時間を保持
     let lastDateTime = new Date(current);
-    
-    // 1秒ごとに1分進める
     timer = setInterval(() => {
       // props.currentDateを使わず、前回の時間から計算
       lastDateTime.setMinutes(lastDateTime.getMinutes() + direction);

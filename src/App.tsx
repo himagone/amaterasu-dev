@@ -45,9 +45,9 @@ enum ZoomLevel {
 }
 
 function getZoomLevelFile(zoom: number): string {
-  if (zoom < 9) return `/output_test_${ZoomLevel.Low}.csv`;
-  if (zoom < 12) return `/output_test_${ZoomLevel.Medium}.csv`;
-  if (zoom < 15) return `/output_test_${ZoomLevel.High}.csv`;
+  if (zoom < 12.5) return `/output_test_${ZoomLevel.Low}.csv`;
+  if (zoom >= 12.5 && zoom <= 14) return `/output_test_${ZoomLevel.Medium}.csv`;
+  if (zoom > 14 && zoom <= 15.2) return `/output_test_${ZoomLevel.High}.csv`;
   return `/output_test_${ZoomLevel.Detail}.csv`;
 }
 
@@ -76,7 +76,7 @@ function App() {
   const [layers, setLayers] = useState<any[]>([]);
   const [currentDate, setDateTime] = useState<string>(now.toString());
   const [data, setData] = useState<LocationData[]>([]);
-  const [currentDateTime, setCurrentDateTime] = useState(new Date('2025-03-03T01:00:00Z'));
+  const [selectedDateTime, setSelectedDateTime] = useState(new Date('2025-03-03T01:00:00Z'));
   const [currentZoom, setCurrentZoom] = useState<number>(10);
   const [currentCsvFile, setCurrentCsvFile] = useState<string>(getZoomLevelFile(10));
   const [availableTimes, setAvailableTimes] = useState<Set<string>>(new Set());
@@ -131,21 +131,20 @@ function App() {
       .catch(err => console.error('CSV読み込みエラー:', err));
   }, [currentCsvFile]);
 
-  // 現在時刻までのデータにフィルタリング - 蓄積ではなく正確な時間帯のみ表示
+  // 現在時刻までのデータにフィルタリング
   const filteredData = useMemo(() => {
     return data.filter(d => {
       const dataTime = new Date(d.time);
       return (
-        dataTime.getFullYear() === currentDateTime.getFullYear() &&
-        dataTime.getMonth() === currentDateTime.getMonth() &&
-        dataTime.getDate() === currentDateTime.getDate() &&
-        dataTime.getHours() === currentDateTime.getHours() &&
-        dataTime.getMinutes() === currentDateTime.getMinutes()
+        dataTime.getFullYear() === selectedDateTime.getFullYear() &&
+        dataTime.getMonth() === selectedDateTime.getMonth() &&
+        dataTime.getDate() === selectedDateTime.getDate() &&
+        dataTime.getHours() === selectedDateTime.getHours() &&
+        dataTime.getMinutes() === selectedDateTime.getMinutes()
       );
     });
-  }, [data, currentDateTime]);
+  }, [data, selectedDateTime]);
 
-  // deck.gl の H3HexagonLayer を設定
   useEffect(() => {
     const newLayers = [
       new H3HexagonLayer({
@@ -171,11 +170,7 @@ function App() {
         opacity: 0.85,
         coverage: 0.95,
         getElevation: (d: LocationData) => {
-          // より自然な高さの変化を実現
-          const baseHeight = d.person_count * 20;
-          // 時間に基づく微細な変化を追加
-          const timeBasedVariation = Math.sin(currentDateTime.getTime() / 5000) * 5;
-          return baseHeight + timeBasedVariation;
+          return d.person_count * 5;
         },
         transitions: {
           getElevation: {
@@ -188,22 +183,15 @@ function App() {
           }
         },
         updateTriggers: {
-          getFillColor: [currentDateTime, personCountRanges],
-          getElevation: [currentDateTime]
+          getFillColor: [selectedDateTime, personCountRanges],
+          getElevation: [selectedDateTime]
         },
         autoHighlight: true,
         highlightColor: [255, 255, 255, 150],
-        onHover: (info: any) => {
-          if (info.object) {
-            const personCount = info.object.person_count;
-            const [lat, lng] = cellToLatLng(info.object.h3_index);
-            console.log(`位置: ${lat.toFixed(6)}, ${lng.toFixed(6)}, 人数: ${personCount || '不明'}`);
-          }
-        }
       })
     ];
     setLayers(newLayers);
-  }, [filteredData, personCountRanges, currentDateTime]);
+  }, [filteredData, personCountRanges, selectedDateTime]);
 
   useEffect(() => {
     if (deckOverlayRef.current) {
@@ -217,7 +205,6 @@ function App() {
   // ズームレベルが変更された時のハンドラー
   const handleZoomChange = (zoom: number) => {
     setCurrentZoom(zoom);
-    // 視点を更新
     setViewState(prevState => ({
       ...prevState,
       zoom,
@@ -227,7 +214,6 @@ function App() {
   
   // 時間が変更されたときの視覚効果
   useEffect(() => {
-    // カメラの動きをより自然に
     setViewState(prevState => {
       const newPitch = prevState.pitch === 30 ? 35 : 30;
       const newBearing = (prevState.bearing + 2) % 360; // 回転速度を遅く
@@ -238,7 +224,7 @@ function App() {
         transitionDuration: 2000 // アニメーション時間を長く
       };
     });
-  }, [currentDateTime]);
+  }, [selectedDateTime]);
   
   return (
     <>
@@ -253,8 +239,8 @@ function App() {
         
         <div className="visualization-controls">
           <DateTime 
-            currentDate={currentDateTime.toString()} 
-            setDateTime={(dateStr: string) => setCurrentDateTime(new Date(dateStr))} 
+            currentDate={selectedDateTime.toString()} 
+            setDateTime={(dateStr: string) => setSelectedDateTime(new Date(dateStr))} 
             availableTimes={availableTimes}
           />
         </div>
