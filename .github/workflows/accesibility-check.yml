@@ -43,9 +43,9 @@ jobs:
         run: npm install -g pa11y
 
       - name: Build site(Vite)
-        run: pa11y http://localhost:4173 > pa11y-result.json
+        run: pa11y http://localhost:4173 --chrome-launcher-flags="--no-sandbox" > pa11y-result.json
       # - name: Build site(Nextjs)
-      #   run: pa11y http://localhost:3000 > pa11y-result.json
+      #   run: pa11y http://localhost:3000 --chrome-launcher-flags="--no-sandbox" > pa11y-result.json
 
       - name: Post result to GoogleSpreadSheet via GoogleSpreadSheet
         env:
