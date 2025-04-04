@@ -1,0 +1,56 @@
+name: Accesibility Check with pa11y
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  pa11y-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check code
+        uses: actions/checkout@v3
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dipendencies
+        run: npm ci
+
+      # --- Build & Preview: Vite ---
+      - name: Build Vite
+        if: env.FRAMEWORK == 'vite'
+        run: npm run build
+
+      - name: Preview Vite
+        if: env.FRAMEWORK == 'vite'
+        run: |
+          npm run preview &  # vite preview
+          sleep 5
+
+      # --- Build & Preview: Next.js ---
+      # - name: Build Next.js
+      #   if: env.FRAMEWORK == 'nextjs'
+      #   run: npm run build
+
+      # - name: Preview Next.js
+      #   if: env.FRAMEWORK == 'nextjs'
+      #   run: |
+      #     npm run start &  # next start
+      #     sleep 5
+      - name: Install pa11y
+        run: npm install -g pa11y
+
+      - name: Build site(Vite)
+        run: pa11y http://localhost:4173 > pa11y-result.json
+      # - name: Build site(Nextjs)
+      #   run: pa11y http://localhost:3000 > pa11y-result.json
+
+      - name: Post result to GoogleSpreadSheet via GoogleSpreadSheet
+        env:
+          GAS_WEBHOOK_URL: ${{ secrets.GAS_WEBHOOK_URL }}
+        run: |
+          curl -X POST "$GAS_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d @pa11y-result.json
