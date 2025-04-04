@@ -78,8 +78,8 @@ function App() {
   const [currentZoom, setCurrentZoom] = useState<number>(10);
   const [currentCsvFile, setCurrentCsvFile] = useState<string>(getZoomLevelFile(10));
   const [availableTimes, setAvailableTimes] = useState<Set<string>>(new Set());
-  const [personCountRanges, setPersonCountRanges] = useState<PersonCountRange[]>(defaultPersonCountRanges);
-  const [viewState, setViewState] = useState({
+  const [personCountRanges] = useState<PersonCountRange[]>(defaultPersonCountRanges);
+  const [_viewState, setViewState] = useState({
     longitude: 139.741357,
     latitude: 35.658099,
     zoom: 10,
@@ -89,7 +89,6 @@ function App() {
     transitionInterpolator: new FlyToInterpolator(),
     transitionEasing: easeCubic
   });
-  
   // DeckGLオーバーレイの作成
   const deckOverlayRef = useRef<any>(null);
   useEffect(() => {
