@@ -20,22 +20,18 @@ jobs:
 
       # --- Build & Preview: Vite ---
       - name: Build Vite
-        if: env.FRAMEWORK == 'vite'
         run: npm run build
 
       - name: Preview Vite
-        if: env.FRAMEWORK == 'vite'
         run: |
           npm run preview &  # vite preview
           sleep 5
 
       # --- Build & Preview: Next.js ---
       # - name: Build Next.js
-      #   if: env.FRAMEWORK == 'nextjs'
       #   run: npm run build
 
       # - name: Preview Next.js
-      #   if: env.FRAMEWORK == 'nextjs'
       #   run: |
       #     npm run start &  # next start
       #     sleep 5
