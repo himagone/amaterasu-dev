@@ -91,7 +91,7 @@ function DateTime(props: Props) {
     updateDateTimeDisplay(current);
     
     // 現在の時間を保持
-    let lastDateTime = new Date(current);
+    const lastDateTime = new Date(current);
     
     // 3秒ごとに1分進める
     timer = setInterval(() => {
@@ -120,7 +120,7 @@ function DateTime(props: Props) {
     current.setMinutes(current.getMinutes() + direction);
     props.setDateTime(current.toString());
     updateDateTimeDisplay(current);
-    let lastDateTime = new Date(current);
+    const lastDateTime = new Date(current);
     timer = setInterval(() => {
       // props.currentDateを使わず、前回の時間から計算
       lastDateTime.setMinutes(lastDateTime.getMinutes() + direction);

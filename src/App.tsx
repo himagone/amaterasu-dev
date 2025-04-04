@@ -9,8 +9,6 @@ import { MapboxOverlay } from '@deck.gl/mapbox';
 import Papa from 'papaparse'
 import DateTime from './DateTime'
 import { easeCubic } from 'd3-ease';
-import { ArcLayer } from '@deck.gl/layers';
-import { cellToLatLng } from 'h3-js';
 
 // CSV の各行の型
 type LocationData = {
@@ -74,7 +72,7 @@ const materialProps = {
 
 function App() {
   const [layers, setLayers] = useState<any[]>([]);
-  const [currentDate, setDateTime] = useState<string>(now.toString());
+  const [currentDate,] = useState<string>(now.toString());
   const [data, setData] = useState<LocationData[]>([]);
   const [selectedDateTime, setSelectedDateTime] = useState(new Date('2025-03-03T01:00:00Z'));
   const [currentZoom, setCurrentZoom] = useState<number>(10);
