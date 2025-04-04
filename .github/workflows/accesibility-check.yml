@@ -16,7 +16,7 @@ jobs:
           node-version: 18
 
       - name: Install dipendencies
-        run: npm ci
+        run: npm install
 
       # --- Build & Preview: Vite ---
       - name: Build Vite
