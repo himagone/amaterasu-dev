@@ -28,7 +28,6 @@ jobs:
           sleep 5
           pa11y-ci --config=pa11yci.json --json > pa11y-result.json || true
 
-
       - name: Post result to Google Spreadsheet
         env:
           GAS_WEBHOOK_URL: ${{ secrets.GAS_WEBHOOK_URL }}
