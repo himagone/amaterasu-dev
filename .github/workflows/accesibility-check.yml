@@ -31,4 +31,8 @@ jobs:
       - name: Display Pa11y results
         run: |
           echo "=== Pa11y Test Results ==="
-          cat pa11y-result.json
+          echo "Total tests: $(jq '.total' pa11y-result.json)"
+          echo "Passes: $(jq '.passes' pa11y-result.json)"
+          echo "Errors: $(jq '.errors' pa11y-result.json)"
+          echo -e "\n=== Detailed Errors ==="
+          jq -r '.results | to_entries[] | .value[] | "Error: \(.message)\nLocation: \(.selector)\nContext: \(.context)\n---"' pa11y-result.json
