@@ -13,18 +13,22 @@ jobs:
         with:
           node-version: '18'
           cache: npm
+
       - name: Install dependencies
         run: |
           npm install
           npm install -g pa11y-ci
+
       - name: Build
         run: npm run build
-      - name: pa11y-ci
+
+      - name: Start preview and run Pa11y
         run: |
           npm run preview -- --host &
           sleep 5
           pa11y-ci --json > pa11y-result.json
-      - name: Post result to GoogleSpreadSheet via GoogleSpreadSheet
+
+      - name: Post result to Google Spreadsheet
         env:
           GAS_WEBHOOK_URL: ${{ secrets.GAS_WEBHOOK_URL }}
         run: |
