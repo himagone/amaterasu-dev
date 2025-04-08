@@ -28,10 +28,7 @@ jobs:
           sleep 5
           pa11y-ci --config=pa11yci.json --json > pa11y-result.json || true
 
-      - name: Post result to Google Spreadsheet
-        env:
-          GAS_WEBHOOK_URL: ${{ secrets.GAS_WEBHOOK_URL }}
+      - name: Display Pa11y results
         run: |
-          curl -L -X POST "$GAS_WEBHOOK_URL" \
-            -H "Content-Type: application/json" \
-            -d @pa11y-result.json
+          echo "=== Pa11y Test Results ==="
+          cat pa11y-result.json
