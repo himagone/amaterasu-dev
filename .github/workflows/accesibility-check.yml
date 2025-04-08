@@ -21,7 +21,9 @@ jobs:
         run: npm run build
       - name: pa11y-ci
         run: |
-          run: npm run preview & sleep 3; pa11y-ci --chrome-launcher-options="--no-sandbox"
+          npm run preview -- --host &
+          sleep 5
+          pa11y-ci --json > pa11y-result.json
       - name: Post result to GoogleSpreadSheet via GoogleSpreadSheet
         env:
           GAS_WEBHOOK_URL: ${{ secrets.GAS_WEBHOOK_URL }}
