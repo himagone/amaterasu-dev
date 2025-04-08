@@ -32,6 +32,6 @@ jobs:
         env:
           GAS_WEBHOOK_URL: ${{ secrets.GAS_WEBHOOK_URL }}
         run: |
-          curl -X POST "$GAS_WEBHOOK_URL" \
+          curl -L -X POST "$GAS_WEBHOOK_URL" \
             -H "Content-Type: application/json" \
             -d @pa11y-result.json
