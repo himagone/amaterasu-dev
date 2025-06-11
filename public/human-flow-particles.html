@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>人流パーティクルアニメーション</title>
+<meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+<link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet">
+<script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+<style>
+body { margin: 0; padding: 0; }
+#map { position: absolute; top: 0; bottom: 0; width: 100%; }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+    const map = new maplibregl.Map({
+        container: 'map',
+        center: [125.5, 24.5], // 沖縄周辺
+        zoom: 8,
+        style: {
+            'version': 8,
+            'sources': {},
+            'layers': [{
+                'id': 'background',
+                'type': 'background',
+                'paint': {'background-color': '#000'}
+            }]
+        }
+    });
+
+    map.on('load', () => {
+        // あなたのAPIから人流データを読み込み
+        map.addSource('human-flow-source', {
+            'type': 'raster-array',
+            'url': 'http://localhost:8080/api/v1/flow-vectors/tile.json',
+            'tileSize': 256
+        });
+        
+        // パーティクルレイヤーとして人流を表示
+        map.addLayer({
+            'id': 'human-flow-particles',
+            'type': 'raster-particle',
+            'source': 'human-flow-source',
+            'source-layer': 'flow-vectors',
+            'paint': {
+                'raster-particle-speed-factor': 0.2,
+                'raster-particle-fade-opacity-factor': 0.85,
+                'raster-particle-reset-rate-factor': 0.3,
+                'raster-particle-count': 2000,
+                'raster-particle-max-speed': 25,
+                'raster-particle-color': [
+                    'interpolate',
+                    ['linear'],
+                    ['raster-particle-speed'],
+                    0, 'rgba(30,144,255,200)',    // 低速: 青
+                    5, 'rgba(0,255,127,200)',     // 中速: 緑
+                    10, 'rgba(255,255,0,200)',    // 高速: 黄
+                    15, 'rgba(255,165,0,200)',    // 高速: オレンジ
+                    20, 'rgba(255,69,0,255)'      // 最高速: 赤
+                ]
+            }
+        });
+    });
+</script>
+</body>
+</html> 

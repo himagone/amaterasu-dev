@@ -3,243 +3,280 @@ import Header from './Header.tsx'
 import Map from './Map.tsx'
 import './App.css'
 import Weather from './Weather.tsx'
-import { H3HexagonLayer } from '@deck.gl/geo-layers'
+import { HeatmapLayer } from '@deck.gl/aggregation-layers'
 import { LightingEffect, AmbientLight, DirectionalLight, FlyToInterpolator } from '@deck.gl/core'
 import { MapboxOverlay } from '@deck.gl/mapbox';
-import Papa from 'papaparse'
 import DateTime from './DateTime'
 import { easeCubic } from 'd3-ease';
 
-// CSV の各行の型
-type LocationData = {
-  time: string;         // UTC の ISO8601 形式のタイムスタンプ（例: "2025-03-03T01:38:00Z"）
-  h3_index: string;     // H3 インデックス
-  person_count: number; // 人数カウント
-};
+// 必要な型とデフォルト値を定義
+type LocationData = any;
+type PersonCountRange = any;
+interface HeatmapPoint {
+  h3Index: string;
+  lat: number;
+  lng: number;
+  intensity: number;
+  value: number;
+}
 
+const defaultPersonCountRanges: PersonCountRange[] = [];
 const now = new Date();
-// パーソンカウントの定義（範囲ごとに色分け）
-type PersonCountRange = {
-  id: string;
-  name: string;
-  min: number;
-  max: number;
-  color: [number, number, number, number];
-  enabled: boolean;
-};
-const defaultPersonCountRanges: PersonCountRange[] = [
-  { id: 'very-low', name: '非常に少ない', min: 1, max: 5, color: [0, 128, 255, 200], enabled: true },
-  { id: 'low', name: '少ない', min: 6, max: 20, color: [0, 255, 0, 200], enabled: true },
-  { id: 'medium', name: '普通', min: 21, max: 50, color: [255, 255, 0, 200], enabled: true },
-  { id: 'high', name: '多い', min: 51, max: 100, color: [255, 165, 0, 200], enabled: true },
-  { id: 'very-high', name: '非常に多い', min: 101, max: 9999, color: [255, 0, 0, 200], enabled: true }
-];
-// ズームレベルに応じたCSVファイル
-enum ZoomLevel {
-  Low = 'low',
-  Medium = 'medium',
-  High = 'high',
-  Detail = 'detail'
-}
 
-function getZoomLevelFile(zoom: number): string {
-  if (zoom < 12.5) return `/output_test_${ZoomLevel.Low}.csv`;
-  if (zoom >= 12.5 && zoom <= 14) return `/output_test_${ZoomLevel.Medium}.csv`;
-  if (zoom > 14 && zoom <= 15.2) return `/output_test_${ZoomLevel.High}.csv`;
-  return `/output_test_${ZoomLevel.Detail}.csv`;
-}
-
-// WebGL照明エフェクトの設定
-const ambientLight = new AmbientLight({
-  color: [255, 255, 255],
-  intensity: 0.8
-});
-
-const directionalLight = new DirectionalLight({
-  color: [255, 255, 255],
-  intensity: 1.5,
-  direction: [-3, -3, -1]
-});
-
-const lightingEffect = new LightingEffect({ ambientLight, directionalLight });
-
-const materialProps = {
-  ambient: 0.5,
-  diffuse: 0.6,
-  shininess: 32,
-  specularColor: [51, 51, 51] as [number, number, number]
+const getZoomLevelFile = (zoom: number): string => {
+  return `data_zoom_${Math.floor(zoom)}.csv`;
 };
 
 function App() {
   const [layers, setLayers] = useState<any[]>([]);
-  const [currentDate,] = useState<string>(now.toString());
-  const [data, setData] = useState<LocationData[]>([]);
-  const [selectedDateTime, setSelectedDateTime] = useState(new Date('2025-03-03T01:00:00Z'));
+  const [locationData, setLocationData] = useState<LocationData[]>([]);
+  const [personCount, setPersonCount] = useState<PersonCountRange>({ min: 0, max: 0 });
+  const [currentDate, setCurrentDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [selectedDateTime, setSelectedDateTime] = useState<Date>(new Date());
+  const [availableTimes, setAvailableTimes] = useState<Set<string>>(new Set());
   const [currentZoom, setCurrentZoom] = useState<number>(10);
   const [currentCsvFile, setCurrentCsvFile] = useState<string>(getZoomLevelFile(10));
-  const [availableTimes, setAvailableTimes] = useState<Set<string>>(new Set());
-  const [personCountRanges] = useState<PersonCountRange[]>(defaultPersonCountRanges);
-  const [_viewState, setViewState] = useState({
-    longitude: 139.741357,
-    latitude: 35.658099,
-    zoom: 10,
-    pitch: 30,
-    bearing: 0,
-    transitionDuration: 1000,
-    transitionInterpolator: new FlyToInterpolator(),
-    transitionEasing: easeCubic
-  });
-  // DeckGLオーバーレイの作成
-  const deckOverlayRef = useRef<any>(null);
-  useEffect(() => {
-    deckOverlayRef.current = new MapboxOverlay({
-      layers,
-      effects: [lightingEffect],
-      interleaved: true
-    });
-  }, []);
+  const [showHumanFlowParticles, setShowHumanFlowParticles] = useState<boolean>(false);
+  const [showHeatmapLayer, setShowHeatmapLayer] = useState<boolean>(false);
+  const [heatmapData, setHeatmapData] = useState<HeatmapPoint[]>([]);
+  const [particleDataStatus, setParticleDataStatus] = useState<{isUsingRealData: boolean, dataPoints: number} | null>(null);
+  const [mapInstance, setMapInstance] = useState<any>(null);
+  const [isControlsCollapsed, setIsControlsCollapsed] = useState<boolean>(false);
+  const [timeWindowMinutes, setTimeWindowMinutes] = useState<number>(30);
 
-  // ズームレベルに応じてCSVファイルを切り替え
-  useEffect(() => {
-    const newCsvFile = getZoomLevelFile(currentZoom);
-    if (newCsvFile !== currentCsvFile) {
-      setCurrentCsvFile(newCsvFile);
-    }
-  }, [currentZoom]);
-  
-  useEffect(() => {
-    fetch(currentCsvFile)
-      .then(response => response.text())
-      .then(csv => {
-        const results = Papa.parse<LocationData>(csv, {
-          header: true,
-          dynamicTyping: true,
-          skipEmptyLines: true,
-        });
-        const times = new Set<string>();
-        results.data.forEach(item => {
-          if (item.time) {
-            times.add(item.time);
-          }
-        });
-        setAvailableTimes(times);
-        setData(results.data);
-      })
-      .catch(err => console.error('CSV読み込みエラー:', err));
-  }, [currentCsvFile]);
-
-  // 現在時刻までのデータにフィルタリング
-  const filteredData = useMemo(() => {
-    return data.filter(d => {
-      const dataTime = new Date(d.time);
-      return (
-        dataTime.getFullYear() === selectedDateTime.getFullYear() &&
-        dataTime.getMonth() === selectedDateTime.getMonth() &&
-        dataTime.getDate() === selectedDateTime.getDate() &&
-        dataTime.getHours() === selectedDateTime.getHours() &&
-        dataTime.getMinutes() === selectedDateTime.getMinutes()
-      );
-    });
-  }, [data, selectedDateTime]);
-
-  useEffect(() => {
-    const newLayers = [
-      new H3HexagonLayer({
-        id: 'h3-hexagon-layer',
-        data: filteredData,
-        getHexagon: (d: LocationData) => d.h3_index,
-        getFillColor: (d: LocationData) => {
-          const range = personCountRanges.find(range => 
-            d.person_count >= range.min && d.person_count <= range.max
-          );
-          return range ? range.color : [100, 100, 100, 200];
-        },
-        extruded: true,
-        elevationScale: 1,
-        material: {
-          ...materialProps,
-          ambient: 0.6,
-          diffuse: 0.7,
-          shininess: 40,
-          specularColor: [60, 60, 60]
-        },
-        pickable: true,
-        opacity: 0.85,
-        coverage: 0.95,
-        getElevation: (d: LocationData) => {
-          return d.person_count * 5;
-        },
-        transitions: {
-          getElevation: {
-            duration: 2000,
-            easing: easeCubic
-          },
-          getFillColor: {
-            duration: 1000,
-            easing: easeCubic
-          }
-        },
-        updateTriggers: {
-          getFillColor: [selectedDateTime, personCountRanges],
-          getElevation: [selectedDateTime]
-        },
-        autoHighlight: true,
-        highlightColor: [255, 255, 255, 150],
-      })
-    ];
-    setLayers(newLayers);
-  }, [filteredData, personCountRanges, selectedDateTime]);
-
-  useEffect(() => {
-    if (deckOverlayRef.current) {
-      deckOverlayRef.current.setProps({
-        layers,
-        effects: [lightingEffect]
-      });
-    }
-  }, [layers]);
-  
-  // ズームレベルが変更された時のハンドラー
   const handleZoomChange = (zoom: number) => {
     setCurrentZoom(zoom);
-    setViewState(prevState => ({
-      ...prevState,
-      zoom,
-      transitionDuration: 500
-    }));
+    const newFile = getZoomLevelFile(zoom);
+    if (newFile !== currentCsvFile) {
+      setCurrentCsvFile(newFile);
+    }
   };
-  
-  // 時間が変更されたときの視覚効果
+
+  const handleHeatmapDataUpdate = (data: HeatmapPoint[]) => {
+    setHeatmapData(data);
+  };
+
+  const handleParticleDataUpdate = (status: {isUsingRealData: boolean, dataPoints: number}) => {
+    setParticleDataStatus(status);
+  };
+
+  // パーティクル表示がOFFになったときの状態リセット
   useEffect(() => {
-    setViewState(prevState => {
-      const newPitch = prevState.pitch === 30 ? 35 : 30;
-      const newBearing = (prevState.bearing + 2) % 360; // 回転速度を遅く
-      return {
-        ...prevState,
-        pitch: newPitch,
-        bearing: newBearing,
-        transitionDuration: 2000 // アニメーション時間を長く
-      };
+    if (!showHumanFlowParticles) {
+      setParticleDataStatus(null);
+    }
+  }, [showHumanFlowParticles]);
+
+  // Deck.glレイヤーの作成
+  const deckLayers = useMemo(() => {
+    const layerList: any[] = [];
+
+    // ヒートマップレイヤー
+    if (showHeatmapLayer && heatmapData.length > 0) {
+      const heatmapLayer = new HeatmapLayer({
+        id: 'density-heatmap',
+        data: heatmapData,
+        pickable: true,
+        getPosition: (d: HeatmapPoint) => [d.lng, d.lat],
+        getWeight: (d: HeatmapPoint) => d.intensity,
+        radiusPixels: 50,
+        intensityScale: 0.6,
+        threshold: 0.05,
+        colorRange: [
+          [0, 255, 0, 100],      // 緑: 低密度 (透過度アップ)
+          [255, 255, 0, 120],    // 黄: 中密度 (透過度アップ)
+          [255, 165, 0, 140],    // オレンジ: 高密度 (透過度アップ)
+          [255, 69, 0, 160],     // 赤オレンジ: 高密度 (透過度アップ)
+          [255, 0, 0, 180],      // 赤: 最高密度 (透過度アップ)
+          [139, 0, 0, 200]       // 暗赤: 極高密度 (透過度アップ)
+        ],
+        updateTriggers: {
+          getPosition: [heatmapData],
+          getWeight: [heatmapData]
+        }
+      });
+      layerList.push(heatmapLayer);
+    }
+
+    return layerList;
+  }, [showHeatmapLayer, heatmapData]);
+
+  // Deck.glオーバーレイの作成
+  const deckOverlay = useMemo(() => {
+    if (deckLayers.length === 0) return null;
+
+    return new MapboxOverlay({
+      layers: deckLayers,
+      getTooltip: (info: any) => {
+        if (info.object && info.object.h3Index) {
+          return {
+            html: `
+              <div style="padding: 8px; background: rgba(0,0,0,0.8); color: white; border-radius: 4px;">
+                <div><strong>位置:</strong> ${info.object.lat.toFixed(6)}, ${info.object.lng.toFixed(6)}</div>
+                <div><strong>密度レベル:</strong> ${info.object.intensity}</div>
+                <div><strong>値:</strong> ${info.object.value.toFixed(1)}</div>
+                <div><strong>H3インデックス:</strong> ${info.object.h3Index}</div>
+              </div>
+            `,
+            style: {
+              backgroundColor: 'transparent',
+              border: 'none',
+              color: 'white'
+            }
+          };
+        }
+        return null;
+      }
     });
-  }, [selectedDateTime]);
-  
+  }, [deckLayers]);
+
   return (
     <>
       <div className="app">
         <Header />
         <Map 
           currentDate={currentDate} 
-          deckOverlay={deckOverlayRef.current}
+          selectedDateTime={selectedDateTime}
+          deckOverlay={deckOverlay}
           onZoomChange={handleZoomChange}
+          showHumanFlowParticles={showHumanFlowParticles}
+          showHeatmapLayer={showHeatmapLayer}
+          onHeatmapDataUpdate={handleHeatmapDataUpdate}
+          onParticleDataUpdate={handleParticleDataUpdate}
+          mapInstance={mapInstance}
+          setMapInstance={setMapInstance}
+          timeWindowMinutes={timeWindowMinutes}
         />
         <Weather currentDate={currentDate} />
         
-        <div className="visualization-controls">
-          <DateTime 
-            currentDate={selectedDateTime.toString()} 
-            setDateTime={(dateStr: string) => setSelectedDateTime(new Date(dateStr))} 
-            availableTimes={availableTimes}
-          />
+        <div className={`visualization-controls ${isControlsCollapsed ? 'collapsed' : ''}`}>
+          <div className="controls-header" onClick={() => setIsControlsCollapsed(!isControlsCollapsed)}>
+            <h2>表示</h2>
+            <button className="toggle-controls-btn" type="button">
+              {isControlsCollapsed ? '📊' : '×'}
+            </button>
+          </div>
+          
+          <div className="controls-content">
+            <DateTime 
+              currentDate={selectedDateTime.toString()} 
+              setDateTime={(dateStr: string) => setSelectedDateTime(new Date(dateStr))} 
+              availableTimes={availableTimes}
+              showHumanFlowParticles={showHumanFlowParticles}
+              showHeatmapLayer={showHeatmapLayer}
+              map={mapInstance}
+              timeWindowMinutes={timeWindowMinutes}
+              setTimeWindowMinutes={setTimeWindowMinutes}
+            />
+            
+            {/* 人流パーティクル制御パネル */}
+            <div className="human-flow-controls">
+              <h3></h3>
+              <label className="toggle-switch">
+                <input
+                  type="checkbox"
+                  checked={showHumanFlowParticles}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setShowHumanFlowParticles(true);
+                      setShowHeatmapLayer(false); // ヒートマップをOFF
+                    } else {
+                      setShowHumanFlowParticles(false);
+                    }
+                  }}
+                />
+                <span className="slider">粒度を表示</span>
+              </label>
+              
+              {/* パーティクル情報 */}
+              <div className={`particle-info ${!showHumanFlowParticles ? 'hidden' : ''}`}>
+                <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>
+                  データ状態: {particleDataStatus?.isUsingRealData ? '🌐 実データ' : '❌ データなし'}
+                </div>
+                <div style={{ fontSize: '11px', color: '#666', marginBottom: '8px' }}>
+                  {particleDataStatus?.isUsingRealData 
+                    ? `${particleDataStatus.dataPoints || 0}個のベクターデータからパーティクルを生成`
+                    : 'APIからデータを取得できませんでした。ネットワーク接続とAPIサーバーの状態を確認してください。'
+                  }
+                </div>
+                <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>色の説明:</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '12px', height: '12px', backgroundColor: 'rgb(30,144,255)', borderRadius: '2px' }}></div>
+                    <span>低速 (0-5 単位/秒)</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '12px', height: '12px', backgroundColor: 'rgb(0,255,127)', borderRadius: '2px' }}></div>
+                    <span>中速 (5-10 単位/秒)</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '12px', height: '12px', backgroundColor: 'rgb(255,255,0)', borderRadius: '2px' }}></div>
+                    <span>高速 (10-15 単位/秒)</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '12px', height: '12px', backgroundColor: 'rgb(255,165,0)', borderRadius: '2px' }}></div>
+                    <span>高速 (15-20 単位/秒)</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '12px', height: '12px', backgroundColor: 'rgb(255,69,0)', borderRadius: '2px' }}></div>
+                    <span>最高速 (20+ 単位/秒)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* ヒートマップ制御パネル */}
+            <div className="heatmap-controls">
+              <h3></h3>
+              <label className="toggle-switch">
+                <input
+                  type="checkbox"
+                  checked={showHeatmapLayer}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setShowHeatmapLayer(true);
+                      setShowHumanFlowParticles(false); // パーティクルをOFF
+                    } else {
+                      setShowHeatmapLayer(false);
+                    }
+                  }}
+                />
+                <span className="slider">密度ヒートマップを表示</span>
+              </label>
+              
+              {/* ヒートマップ情報 */}
+              <div className={`heatmap-info ${!showHeatmapLayer ? 'hidden' : ''}`}>
+                <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>
+                  データ状態: {heatmapData.length > 0 ? '🌐 実データ' : '⏳ 読み込み中'}
+                </div>
+                <div style={{ fontSize: '11px', color: '#666', marginBottom: '8px' }}>
+                  {heatmapData.length > 0 
+                    ? `${heatmapData.length}個のポイントから密度ヒートマップを生成`
+                    : 'APIからヒートマップデータを取得中...'
+                  }
+                </div>
+                <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>密度の色分け:</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '12px', height: '12px', backgroundColor: 'rgb(0,255,0)', borderRadius: '2px' }}></div>
+                    <span>低密度</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '12px', height: '12px', backgroundColor: 'rgb(255,255,0)', borderRadius: '2px' }}></div>
+                    <span>中密度</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '12px', height: '12px', backgroundColor: 'rgb(255,165,0)', borderRadius: '2px' }}></div>
+                    <span>高密度</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '12px', height: '12px', backgroundColor: 'rgb(255,0,0)', borderRadius: '2px' }}></div>
+                    <span>最高密度</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </>

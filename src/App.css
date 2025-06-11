@@ -97,8 +97,7 @@ a {
 .visualization-controls {
   position: absolute;
   bottom: 30px;
-  left: 50%;
-  transform: translateX(-50%);
+  right: 20px;
   z-index: 10;
   background-color: rgba(255, 255, 255, 0.9);
   padding: 15px 20px;
@@ -107,22 +106,88 @@ a {
   backdrop-filter: blur(5px);
   border: 1px solid rgba(255, 255, 255, 0.5);
   transition: all 0.3s ease;
-  animation: fadeIn 0.5s ease-out;
+  animation: fadeInRight 0.5s ease-out;
+  max-width: 350px;
+  min-width: 280px;
+}
+
+.visualization-controls.collapsed {
+  width: 60px;
+  padding: 10px;
+  overflow: hidden;
 }
 
 .visualization-controls:hover {
   box-shadow: 0 12px 25px rgba(0, 0, 0, 0.2);
-  transform: translateX(-50%) translateY(-5px);
+  transform: translateY(-5px);
 }
 
-@keyframes fadeIn {
+.controls-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.controls-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.toggle-controls-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  color: #666;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+}
+
+.toggle-controls-btn:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+  color: #333;
+}
+
+.controls-content {
+  transition: all 0.3s ease;
+  opacity: 1;
+  max-height: 800px;
+  overflow: hidden;
+}
+
+.visualization-controls.collapsed .controls-content {
+  opacity: 0;
+  max-height: 0;
+  margin-top: 0;
+}
+
+.visualization-controls.collapsed .controls-header {
+  margin-bottom: 0;
+}
+
+.visualization-controls.collapsed .controls-header h2 {
+  display: none;
+}
+
+@keyframes fadeInRight {
   from {
     opacity: 0;
-    transform: translateX(-50%) translateY(20px);
+    transform: translateX(50px);
   }
   to {
     opacity: 1;
-    transform: translateX(-50%) translateY(0);
+    transform: translateX(0);
   }
 }
 
@@ -342,5 +407,188 @@ a {
   to {
     transform: translateX(0);
     opacity: 1;
+  }
+}
+
+/* 人流パーティクル制御パネル */
+.human-flow-controls {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.human-flow-controls h3 {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  text-align: center;
+}
+
+/* ヒートマップ制御パネル */
+.heatmap-controls {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.heatmap-controls h3 {
+  margin: 0 0 10px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  text-align: center;
+}
+
+/* トグルスイッチスタイル */
+.toggle-switch {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  gap: 10px;
+  position: relative;
+  user-select: none;
+}
+
+.toggle-switch input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.toggle-switch .slider {
+  position: relative;
+  padding-left: 50px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #555;
+  transition: color 0.3s ease;
+}
+
+.toggle-switch .slider::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 20px;
+  background-color: #ccc;
+  border-radius: 20px;
+  transition: background-color 0.3s ease;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.toggle-switch .slider::after {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  background-color: white;
+  border-radius: 50%;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-switch input:checked + .slider::before {
+  background-color: #2196F3;
+}
+
+.toggle-switch input:checked + .slider::after {
+  transform: translateY(-50%) translateX(20px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.toggle-switch input:checked + .slider {
+  color: #2196F3;
+  font-weight: 600;
+}
+
+.toggle-switch:hover .slider::before {
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.15), 0 0 0 3px rgba(33, 150, 243, 0.1);
+}
+
+.toggle-switch input:focus + .slider::before {
+  outline: 2px solid #2196F3;
+  outline-offset: 2px;
+}
+
+/* パーティクル情報表示 */
+.particle-info {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background-color: rgba(33, 150, 243, 0.1);
+  border-radius: 6px;
+  border-left: 3px solid #2196F3;
+  font-size: 12px;
+  color: #555;
+  line-height: 1.4;
+}
+
+.particle-info.hidden {
+  display: none;
+}
+
+/* ヒートマップ情報表示 */
+.heatmap-info {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background-color: rgba(255, 165, 0, 0.1);
+  border-radius: 6px;
+  border-left: 3px solid #FF6B00;
+  font-size: 12px;
+  color: #555;
+  line-height: 1.4;
+}
+
+.heatmap-info.hidden {
+  display: none;
+}
+
+/* レスポンシブ対応 */
+@media only screen and (max-width: 767px) {
+  .human-flow-controls,
+  .heatmap-controls {
+    margin-bottom: 10px;
+  }
+
+  .human-flow-controls h3,
+  .heatmap-controls h3 {
+    font-size: 14px;
+  }
+
+  .toggle-switch .slider {
+    font-size: 12px;
+  }
+
+  .particle-info,
+  .heatmap-info {
+    font-size: 11px;
+  }
+
+  .visualization-controls {
+    right: 10px;
+    bottom: 15px;
+    max-width: 320px;
+    min-width: 250px;
+    padding: 12px 15px;
+  }
+
+  .visualization-controls.collapsed {
+    width: 50px;
+    padding: 8px;
+  }
+
+  .controls-header h2 {
+    font-size: 16px;
+  }
+
+  .toggle-controls-btn {
+    width: 25px;
+    height: 25px;
+    font-size: 14px;
   }
 }
