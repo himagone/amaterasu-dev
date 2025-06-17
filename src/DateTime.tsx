@@ -31,6 +31,7 @@ type Props = {
   map?: any;
   timeWindowMinutes?: number;
   setTimeWindowMinutes?: (minutes: number) => void;
+  manualFetchHeatmap?: (() => void) | null;
 };
 
 let timer: ReturnType<typeof setInterval> | null = null;
@@ -148,6 +149,11 @@ function DateTime(props: Props) {
     if (props.showHumanFlowParticles) {
       updateParticleLayer(current);
     }
+    
+    // ヒートマップレイヤーの場合は手動fetch
+    if (props.showHeatmapLayer && props.manualFetchHeatmap) {
+      props.manualFetchHeatmap();
+    }
   }
   
   const playNormal = (direction: number, buttonIndex: number) => {
@@ -172,6 +178,11 @@ function DateTime(props: Props) {
       updateParticleLayer(current);
     }
     
+    // ヒートマップレイヤーの場合は手動fetch
+    if (props.showHeatmapLayer && props.manualFetchHeatmap) {
+      props.manualFetchHeatmap();
+    }
+    
     // 現在の時間を保持
     const lastDateTime = new Date(current);
     
@@ -183,6 +194,11 @@ function DateTime(props: Props) {
       
       if (props.showHumanFlowParticles) {
         updateParticleLayer(lastDateTime);
+      }
+      
+      // ヒートマップレイヤーの場合は手動fetch
+      if (props.showHeatmapLayer && props.manualFetchHeatmap) {
+        props.manualFetchHeatmap();
       }
     }, normalInterval);
   }
@@ -211,6 +227,11 @@ function DateTime(props: Props) {
       updateParticleLayer(current);
     }
     
+    // ヒートマップレイヤーの場合は手動fetch
+    if (props.showHeatmapLayer && props.manualFetchHeatmap) {
+      props.manualFetchHeatmap();
+    }
+    
     const lastDateTime = new Date(current);
     timer = setInterval(() => {
       lastDateTime.setMinutes(lastDateTime.getMinutes() + (direction * stepMinutes));
@@ -219,6 +240,11 @@ function DateTime(props: Props) {
       
       if (props.showHumanFlowParticles) {
         updateParticleLayer(lastDateTime);
+      }
+      
+      // ヒートマップレイヤーの場合は手動fetch
+      if (props.showHeatmapLayer && props.manualFetchHeatmap) {
+        props.manualFetchHeatmap();
       }
     }, fastInterval);
   }

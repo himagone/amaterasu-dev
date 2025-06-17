@@ -43,6 +43,8 @@ function App() {
   const [mapInstance, setMapInstance] = useState<any>(null);
   const [isControlsCollapsed, setIsControlsCollapsed] = useState<boolean>(false);
   const [timeWindowMinutes, setTimeWindowMinutes] = useState<number>(30);
+  const [isHeatmapLoading, setIsHeatmapLoading] = useState<boolean>(false);
+  const [heatmapError, setHeatmapError] = useState<string | null>(null);
 
   const handleZoomChange = (zoom: number) => {
     setCurrentZoom(zoom);
@@ -58,6 +60,14 @@ function App() {
 
   const handleParticleDataUpdate = (status: {isUsingRealData: boolean, dataPoints: number}) => {
     setParticleDataStatus(status);
+  };
+
+  const handleHeatmapLoadingStateChange = (isLoading: boolean) => {
+    setIsHeatmapLoading(isLoading);
+  };
+
+  const handleHeatmapErrorStateChange = (error: string | null) => {
+    setHeatmapError(error);
   };
 
   // パーティクル表示がOFFになったときの状態リセット
@@ -146,6 +156,8 @@ function App() {
           mapInstance={mapInstance}
           setMapInstance={setMapInstance}
           timeWindowMinutes={timeWindowMinutes}
+          onLoadingStateChange={handleHeatmapLoadingStateChange}
+          onErrorStateChange={handleHeatmapErrorStateChange}
         />
         <Weather currentDate={currentDate} />
         
@@ -168,63 +180,6 @@ function App() {
               timeWindowMinutes={timeWindowMinutes}
               setTimeWindowMinutes={setTimeWindowMinutes}
             />
-            
-            {/* 人流パーティクル制御パネル */}
-            <div className="human-flow-controls">
-              <h3></h3>
-              <label className="toggle-switch">
-                <input
-                  type="checkbox"
-                  checked={showHumanFlowParticles}
-                  onChange={(e) => {
-                    if (e.target.checked) {
-                      setShowHumanFlowParticles(true);
-                      setShowHeatmapLayer(false); // ヒートマップをOFF
-                    } else {
-                      setShowHumanFlowParticles(false);
-                    }
-                  }}
-                />
-                <span className="slider">粒度を表示</span>
-              </label>
-              
-              {/* パーティクル情報 */}
-              <div className={`particle-info ${!showHumanFlowParticles ? 'hidden' : ''}`}>
-                <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>
-                  データ状態: {particleDataStatus?.isUsingRealData ? '🌐 実データ' : '❌ データなし'}
-                </div>
-                <div style={{ fontSize: '11px', color: '#666', marginBottom: '8px' }}>
-                  {particleDataStatus?.isUsingRealData 
-                    ? `${particleDataStatus.dataPoints || 0}個のベクターデータからパーティクルを生成`
-                    : 'APIからデータを取得できませんでした。ネットワーク接続とAPIサーバーの状態を確認してください。'
-                  }
-                </div>
-                <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>色の説明:</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '12px', height: '12px', backgroundColor: 'rgb(30,144,255)', borderRadius: '2px' }}></div>
-                    <span>低速 (0-5 単位/秒)</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '12px', height: '12px', backgroundColor: 'rgb(0,255,127)', borderRadius: '2px' }}></div>
-                    <span>中速 (5-10 単位/秒)</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '12px', height: '12px', backgroundColor: 'rgb(255,255,0)', borderRadius: '2px' }}></div>
-                    <span>高速 (10-15 単位/秒)</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '12px', height: '12px', backgroundColor: 'rgb(255,165,0)', borderRadius: '2px' }}></div>
-                    <span>高速 (15-20 単位/秒)</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '12px', height: '12px', backgroundColor: 'rgb(255,69,0)', borderRadius: '2px' }}></div>
-                    <span>最高速 (20+ 単位/秒)</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             {/* ヒートマップ制御パネル */}
             <div className="heatmap-controls">
               <h3></h3>
@@ -247,12 +202,18 @@ function App() {
               {/* ヒートマップ情報 */}
               <div className={`heatmap-info ${!showHeatmapLayer ? 'hidden' : ''}`}>
                 <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>
-                  データ状態: {heatmapData.length > 0 ? '🌐 実データ' : '⏳ 読み込み中'}
+                  データ状態: {
+                    heatmapError ? '❌ エラー' :
+                    isHeatmapLoading ? '⏳ 読み込み中' :
+                    heatmapData.length > 0 ? '🌐 実データ' : '⚪ 待機中'
+                  }
                 </div>
                 <div style={{ fontSize: '11px', color: '#666', marginBottom: '8px' }}>
-                  {heatmapData.length > 0 
+                  {heatmapError ? `エラー: ${heatmapError}` :
+                   isHeatmapLoading ? 'APIからヒートマップデータを取得中...' :
+                   heatmapData.length > 0 
                     ? `${heatmapData.length}個のポイントから密度ヒートマップを生成`
-                    : 'APIからヒートマップデータを取得中...'
+                    : 'データを読み込む準備ができています'
                   }
                 </div>
                 <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>密度の色分け:</div>
