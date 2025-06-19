@@ -77,9 +77,10 @@ a {
 }
 
 .app {
-  width: 100%;
-  height: 100vh;
   position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .datetime-container {
@@ -95,365 +96,102 @@ a {
 }
 
 .visualization-controls {
-  position: absolute;
-  bottom: 30px;
+  position: fixed;
+  top: 20px;
   right: 20px;
-  z-index: 10;
-  background-color: rgba(255, 255, 255, 0.9);
-  padding: 15px 20px;
+  background: rgba(37, 42, 52, 0.9);
+  backdrop-filter: blur(10px);
   border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-  backdrop-filter: blur(5px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  transition: all 0.3s ease;
-  animation: fadeInRight 0.5s ease-out;
-  max-width: 350px;
-  min-width: 280px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  width: 300px;
+  max-height: 80vh;
+  overflow-y: auto;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1000;
+  color: white;
 }
 
 .visualization-controls.collapsed {
-  width: 60px;
-  padding: 10px;
+  width: 50px;
+  height: 50px;
   overflow: hidden;
-}
-
-.visualization-controls:hover {
-  box-shadow: 0 12px 25px rgba(0, 0, 0, 0.2);
-  transform: translateY(-5px);
 }
 
 .controls-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   cursor: pointer;
   user-select: none;
 }
 
 .controls-header h2 {
   margin: 0;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
-  color: #333;
+  color: white;
 }
 
 .toggle-controls-btn {
   background: none;
   border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 18px;
   cursor: pointer;
-  padding: 5px;
+  padding: 4px;
   border-radius: 4px;
   transition: all 0.2s ease;
-  color: #666;
-  font-size: 16px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
 }
 
 .toggle-controls-btn:hover {
-  background-color: rgba(0, 0, 0, 0.1);
-  color: #333;
+  color: white;
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .controls-content {
-  transition: all 0.3s ease;
+  padding: 0;
   opacity: 1;
-  max-height: 800px;
-  overflow: hidden;
+  transition: opacity 0.3s ease;
 }
 
-.visualization-controls.collapsed .controls-content {
+.collapsed .controls-content {
   opacity: 0;
-  max-height: 0;
-  margin-top: 0;
+  pointer-events: none;
 }
 
-.visualization-controls.collapsed .controls-header {
-  margin-bottom: 0;
+/* Windy風のレイヤーコントロール */
+.layer-control {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.visualization-controls.collapsed .controls-header h2 {
-  display: none;
+.layer-control:last-child {
+  border-bottom: none;
 }
 
-@keyframes fadeInRight {
-  from {
-    opacity: 0;
-    transform: translateX(50px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-.hexagon-enter {
-  animation: hexagonEnter 0.8s ease-out;
-}
-
-@keyframes hexagonEnter {
-  0% {
-    opacity: 0;
-    transform: translateY(10px) scale(0.9);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.data-update-indicator {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  background-color: rgba(33, 150, 243, 0.9);
-  color: white;
-  padding: 8px 15px;
-  border-radius: 20px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
-  z-index: 1000;
-  transform-origin: center right;
-  animation: slideInRight 0.5s ease-out, fadeOut 0.5s ease-in 2.5s forwards;
-  font-weight: 500;
+.layer-control h3 {
+  margin: 0 0 12px 0;
   font-size: 14px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.data-update-indicator::before {
-  content: "";
-  display: inline-block;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background-color: white;
-  animation: pulse 1.5s infinite;
-}
-
-@keyframes slideInRight {
-  from {
-    transform: translateX(100px);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-@keyframes fadeOut {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-    visibility: hidden;
-  }
-}
-
-/* パーソンカウントフィルター */
-.person-count-filter {
-  position: absolute;
-  top: 70px;
-  right: 20px;
-  z-index: 10;
-  background-color: rgba(255, 255, 255, 0.9);
-  padding: 15px;
-  border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-  backdrop-filter: blur(5px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  max-width: 300px;
-  animation: slideInRight 0.5s ease-out;
-  transition: all 0.3s ease;
-}
-
-.person-count-filter.collapsed {
-  max-height: 50px;
-  overflow: hidden;
-}
-
-.person-count-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  cursor: pointer;
-}
-
-.person-count-filter h3 {
-  margin: 0 0 10px 0;
-  font-size: 16px;
-  color: #333;
-  text-align: center;
-}
-
-.toggle-panel-btn {
-  background: none;
-  border: none;
-  color: #555;
-  font-size: 14px;
-  cursor: pointer;
-  transition: transform 0.3s ease;
-}
-
-.person-count-content {
-  margin-top: 10px;
-}
-
-.person-count-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 15px;
-}
-
-.person-count-btn {
-  padding: 6px 10px;
-  border-radius: 20px;
-  border: 2px solid;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-width: 80px;
-}
-
-.person-count-btn .person-count-name {
-  flex: 1;
-}
-
-.person-count-btn .person-count-count {
-  background-color: rgba(255, 255, 255, 0.7);
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: bold;
-}
-
-.person-count-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
-.person-count-btn.active {
-  font-weight: bold;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-}
-
-.person-count-btn.active::before {
-  content: "✓";
-  margin-right: 4px;
-  font-weight: bold;
-}
-
-.person-count-legend {
-  margin-top: 15px;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
-  padding-top: 10px;
-}
-
-.legend-item {
-  display: flex;
-  align-items: center;
-  margin-bottom: 5px;
-  padding: 5px;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-}
-
-.legend-item:hover {
-  background-color: rgba(0, 0, 0, 0.05);
-}
-
-.color-sample {
-  width: 16px;
-  height: 16px;
-  border-radius: 3px;
-  margin-right: 8px;
-}
-
-.legend-details {
-  display: flex;
-  flex-direction: column;
-  font-size: 12px;
-}
-
-.legend-name {
   font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.legend-count {
-  color: #666;
-  font-size: 10px;
-}
-
-@keyframes slideInRight {
-  from {
-    transform: translateX(50px);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-/* 人流パーティクル制御パネル */
-.human-flow-controls {
-  margin-top: 15px;
-  padding-top: 15px;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
-}
-
-.human-flow-controls h3 {
-  margin: 0 0 10px 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
-  text-align: center;
-}
-
-/* ヒートマップ制御パネル */
-.heatmap-controls {
-  margin-top: 15px;
-  padding-top: 15px;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
-}
-
-.heatmap-controls h3 {
-  margin: 0 0 10px 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
-  text-align: center;
-}
-
-/* トグルスイッチスタイル */
+/* Windy風のトグルスイッチ */
 .toggle-switch {
   display: flex;
   align-items: center;
   cursor: pointer;
-  gap: 10px;
-  position: relative;
   user-select: none;
+  margin-bottom: 8px;
 }
 
 .toggle-switch input[type="checkbox"] {
-  position: absolute;
-  opacity: 0;
-  cursor: pointer;
+  display: none;
 }
 
 .toggle-switch .slider {
@@ -461,134 +199,280 @@ a {
   padding-left: 50px;
   font-size: 14px;
   font-weight: 500;
-  color: #555;
-  transition: color 0.3s ease;
+  color: white;
+  transition: all 0.2s ease;
 }
 
-.toggle-switch .slider::before {
-  content: "";
+.toggle-switch .slider:before {
+  content: '';
   position: absolute;
   left: 0;
   top: 50%;
   transform: translateY(-50%);
   width: 40px;
   height: 20px;
-  background-color: #ccc;
-  border-radius: 20px;
-  transition: background-color 0.3s ease;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.toggle-switch .slider::after {
-  content: "";
+.toggle-switch .slider:after {
+  content: '';
   position: absolute;
   left: 2px;
   top: 50%;
   transform: translateY(-50%);
   width: 16px;
   height: 16px;
-  background-color: white;
+  background: white;
   border-radius: 50%;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.toggle-switch input:checked + .slider::before {
-  background-color: #2196F3;
+.toggle-switch input:checked + .slider:before {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
-.toggle-switch input:checked + .slider::after {
+.toggle-switch input:checked + .slider:after {
   transform: translateY(-50%) translateX(20px);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
-.toggle-switch input:checked + .slider {
-  color: #2196F3;
+.toggle-switch:hover .slider:before {
+  box-shadow: 0 0 20px rgba(102, 126, 234, 0.4);
+}
+
+/* レイヤー情報表示 */
+.layer-info {
+  margin-top: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border-left: 3px solid #667eea;
+  transition: all 0.3s ease;
+}
+
+.layer-info.hidden {
+  opacity: 0;
+  transform: translateY(-10px);
+  max-height: 0;
+  padding: 0 12px;
+  margin-top: 0;
+  overflow: hidden;
+}
+
+.layer-info .status {
+  font-size: 12px;
   font-weight: 600;
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.toggle-switch:hover .slider::before {
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.15), 0 0 0 3px rgba(33, 150, 243, 0.1);
-}
-
-.toggle-switch input:focus + .slider::before {
-  outline: 2px solid #2196F3;
-  outline-offset: 2px;
-}
-
-/* パーティクル情報表示 */
-.particle-info {
-  margin-top: 10px;
-  padding: 8px 12px;
-  background-color: rgba(33, 150, 243, 0.1);
-  border-radius: 6px;
-  border-left: 3px solid #2196F3;
-  font-size: 12px;
-  color: #555;
+.layer-info .description {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
   line-height: 1.4;
+  margin-bottom: 8px;
 }
 
-.particle-info.hidden {
-  display: none;
+.layer-info .legend {
+  margin-top: 12px;
 }
 
-/* ヒートマップ情報表示 */
-.heatmap-info {
-  margin-top: 10px;
-  padding: 8px 12px;
-  background-color: rgba(255, 165, 0, 0.1);
-  border-radius: 6px;
-  border-left: 3px solid #FF6B00;
+.layer-info .legend-title {
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.legend-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* Windy風の時間窓ボタン */
+.time-window-settings {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.time-window-title {
   font-size: 12px;
-  color: #555;
-  line-height: 1.4;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
-.heatmap-info.hidden {
-  display: none;
+.time-window-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.time-window-btn {
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: center;
+}
+
+.time-window-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: white;
+}
+
+.time-window-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: #667eea;
+  color: white;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+/* Windy風の時間コントロール（下部固定） */
+.datetime-controls {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(37, 42, 52, 0.9);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  z-index: 1000;
+  color: white;
+}
+
+.time-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.time-display input {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.time-display input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.player {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.player button {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.player button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+.player button:active {
+  transform: scale(0.95);
+}
+
+/* スクロールバーのスタイル */
+.visualization-controls::-webkit-scrollbar {
+  width: 4px;
+}
+
+.visualization-controls::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+.visualization-controls::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+}
+
+.visualization-controls::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* アニメーション */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.layer-control {
+  animation: fadeInUp 0.3s ease;
 }
 
 /* レスポンシブ対応 */
-@media only screen and (max-width: 767px) {
-  .human-flow-controls,
-  .heatmap-controls {
-    margin-bottom: 10px;
-  }
-
-  .human-flow-controls h3,
-  .heatmap-controls h3 {
-    font-size: 14px;
-  }
-
-  .toggle-switch .slider {
-    font-size: 12px;
-  }
-
-  .particle-info,
-  .heatmap-info {
-    font-size: 11px;
-  }
-
+@media (max-width: 768px) {
   .visualization-controls {
-    right: 10px;
-    bottom: 15px;
-    max-width: 320px;
-    min-width: 250px;
-    padding: 12px 15px;
+    width: calc(100vw - 40px);
+    right: 20px;
+    left: 20px;
   }
-
-  .visualization-controls.collapsed {
-    width: 50px;
-    padding: 8px;
-  }
-
-  .controls-header h2 {
-    font-size: 16px;
-  }
-
-  .toggle-controls-btn {
-    width: 25px;
-    height: 25px;
-    font-size: 14px;
+  
+  .datetime-controls {
+    width: calc(100vw - 40px);
+    left: 20px;
+    transform: none;
   }
 }
+

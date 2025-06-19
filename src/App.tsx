@@ -36,15 +36,14 @@ function App() {
   const [availableTimes, setAvailableTimes] = useState<Set<string>>(new Set());
   const [currentZoom, setCurrentZoom] = useState<number>(10);
   const [currentCsvFile, setCurrentCsvFile] = useState<string>(getZoomLevelFile(10));
-  const [showHumanFlowParticles, setShowHumanFlowParticles] = useState<boolean>(false);
   const [showHeatmapLayer, setShowHeatmapLayer] = useState<boolean>(false);
   const [heatmapData, setHeatmapData] = useState<HeatmapPoint[]>([]);
-  const [particleDataStatus, setParticleDataStatus] = useState<{isUsingRealData: boolean, dataPoints: number} | null>(null);
   const [mapInstance, setMapInstance] = useState<any>(null);
   const [isControlsCollapsed, setIsControlsCollapsed] = useState<boolean>(false);
   const [timeWindowMinutes, setTimeWindowMinutes] = useState<number>(30);
   const [isHeatmapLoading, setIsHeatmapLoading] = useState<boolean>(false);
   const [heatmapError, setHeatmapError] = useState<string | null>(null);
+  const [manualFetchHeatmap, setManualFetchHeatmap] = useState<(() => void) | null>(null);
 
   const handleZoomChange = (zoom: number) => {
     setCurrentZoom(zoom);
@@ -58,10 +57,6 @@ function App() {
     setHeatmapData(data);
   };
 
-  const handleParticleDataUpdate = (status: {isUsingRealData: boolean, dataPoints: number}) => {
-    setParticleDataStatus(status);
-  };
-
   const handleHeatmapLoadingStateChange = (isLoading: boolean) => {
     setIsHeatmapLoading(isLoading);
   };
@@ -70,21 +65,15 @@ function App() {
     setHeatmapError(error);
   };
 
-  // パーティクル表示がOFFになったときの状態リセット
-  useEffect(() => {
-    if (!showHumanFlowParticles) {
-      setParticleDataStatus(null);
-    }
-  }, [showHumanFlowParticles]);
-
-  // Deck.glレイヤーの作成
+  // Deck.glレイヤーの作成（レイヤー重複を防ぐ）
   const deckLayers = useMemo(() => {
     const layerList: any[] = [];
 
-    // ヒートマップレイヤー
+    // ヒートマップレイヤー（showHeatmapLayerがfalseの場合は絶対に表示しない）
     if (showHeatmapLayer && heatmapData.length > 0) {
+      const layerId = `density-heatmap-${Date.now()}`; // 一意なIDを生成
       const heatmapLayer = new HeatmapLayer({
-        id: 'density-heatmap',
+        id: layerId,
         data: heatmapData,
         pickable: true,
         getPosition: (d: HeatmapPoint) => [d.lng, d.lat],
@@ -106,15 +95,21 @@ function App() {
         }
       });
       layerList.push(heatmapLayer);
+      console.log(`Created heatmap layer with ID: ${layerId}, data points: ${heatmapData.length}`);
     }
 
     return layerList;
   }, [showHeatmapLayer, heatmapData]);
 
-  // Deck.glオーバーレイの作成
+  // Deck.glオーバーレイの作成（重複レイヤーを防ぐ）
   const deckOverlay = useMemo(() => {
-    if (deckLayers.length === 0) return null;
+    // レイヤーがない場合はnullを返す（古いオーバーレイが削除される）
+    if (deckLayers.length === 0) {
+      console.log('No layers available - overlay will be removed');
+      return null;
+    }
 
+    console.log(`Creating new MapboxOverlay with ${deckLayers.length} layers`);
     return new MapboxOverlay({
       layers: deckLayers,
       getTooltip: (info: any) => {
@@ -149,40 +144,24 @@ function App() {
           selectedDateTime={selectedDateTime}
           deckOverlay={deckOverlay}
           onZoomChange={handleZoomChange}
-          showHumanFlowParticles={showHumanFlowParticles}
           showHeatmapLayer={showHeatmapLayer}
-          onHeatmapDataUpdate={handleHeatmapDataUpdate}
-          onParticleDataUpdate={handleParticleDataUpdate}
           mapInstance={mapInstance}
           setMapInstance={setMapInstance}
-          timeWindowMinutes={timeWindowMinutes}
-          onLoadingStateChange={handleHeatmapLoadingStateChange}
-          onErrorStateChange={handleHeatmapErrorStateChange}
         />
         <Weather currentDate={currentDate} />
         
         <div className={`visualization-controls ${isControlsCollapsed ? 'collapsed' : ''}`}>
           <div className="controls-header" onClick={() => setIsControlsCollapsed(!isControlsCollapsed)}>
-            <h2>表示</h2>
+            <h2>レイヤー</h2>
             <button className="toggle-controls-btn" type="button">
-              {isControlsCollapsed ? '📊' : '×'}
+              {isControlsCollapsed ? '☰' : '×'}
             </button>
           </div>
           
           <div className="controls-content">
-            <DateTime 
-              currentDate={selectedDateTime.toString()} 
-              setDateTime={(dateStr: string) => setSelectedDateTime(new Date(dateStr))} 
-              availableTimes={availableTimes}
-              showHumanFlowParticles={showHumanFlowParticles}
-              showHeatmapLayer={showHeatmapLayer}
-              map={mapInstance}
-              timeWindowMinutes={timeWindowMinutes}
-              setTimeWindowMinutes={setTimeWindowMinutes}
-            />
             {/* ヒートマップ制御パネル */}
-            <div className="heatmap-controls">
-              <h3></h3>
+            <div className="layer-control">
+              <h3>密度ヒートマップ</h3>
               <label className="toggle-switch">
                 <input
                   type="checkbox"
@@ -190,54 +169,103 @@ function App() {
                   onChange={(e) => {
                     if (e.target.checked) {
                       setShowHeatmapLayer(true);
-                      setShowHumanFlowParticles(false); // パーティクルをOFF
                     } else {
                       setShowHeatmapLayer(false);
+                      // ヒートマップOFF時は即座にデータをクリアしてレイヤーを非表示に
+                      setHeatmapData([]);
+                      setHeatmapError(null);
                     }
                   }}
                 />
-                <span className="slider">密度ヒートマップを表示</span>
+                <span className="slider">密度レイヤー</span>
               </label>
               
               {/* ヒートマップ情報 */}
-              <div className={`heatmap-info ${!showHeatmapLayer ? 'hidden' : ''}`}>
-                <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>
-                  データ状態: {
-                    heatmapError ? '❌ エラー' :
-                    isHeatmapLoading ? '⏳ 読み込み中' :
-                    heatmapData.length > 0 ? '🌐 実データ' : '⚪ 待機中'
-                  }
+              <div className={`layer-info ${!showHeatmapLayer ? 'hidden' : ''}`}>
+                <div className="status">
+                  {heatmapError ? '❌ エラー' :
+                   isHeatmapLoading ? '⏳ 読み込み中' :
+                   heatmapData.length > 0 ? '🌐 アクティブ' : '⚪ 待機中'}
                 </div>
-                <div style={{ fontSize: '11px', color: '#666', marginBottom: '8px' }}>
+                <div className="description">
                   {heatmapError ? `エラー: ${heatmapError}` :
-                   isHeatmapLoading ? 'APIからヒートマップデータを取得中...' :
+                   isHeatmapLoading ? 'データ取得中...' :
                    heatmapData.length > 0 
-                    ? `${heatmapData.length}個のポイントから密度ヒートマップを生成`
-                    : 'データを読み込む準備ができています'
+                    ? `${heatmapData.length}個のポイントから密度マップを生成`
+                    : '時間を変更するとデータを自動取得します'
                   }
                 </div>
-                <div style={{ fontWeight: 'bold', marginBottom: '5px' }}>密度の色分け:</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '12px', height: '12px', backgroundColor: 'rgb(0,255,0)', borderRadius: '2px' }}></div>
-                    <span>低密度</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '12px', height: '12px', backgroundColor: 'rgb(255,255,0)', borderRadius: '2px' }}></div>
-                    <span>中密度</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '12px', height: '12px', backgroundColor: 'rgb(255,165,0)', borderRadius: '2px' }}></div>
-                    <span>高密度</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ width: '12px', height: '12px', backgroundColor: 'rgb(255,0,0)', borderRadius: '2px' }}></div>
-                    <span>最高密度</span>
+                <div className="legend">
+                  <div className="legend-title">密度レベル</div>
+                  <div className="legend-items">
+                    <div className="legend-item">
+                      <div className="legend-color" style={{ backgroundColor: 'rgb(0,255,0)' }}></div>
+                      <span>低密度</span>
+                    </div>
+                    <div className="legend-item">
+                      <div className="legend-color" style={{ backgroundColor: 'rgb(255,255,0)' }}></div>
+                      <span>中密度</span>
+                    </div>
+                    <div className="legend-item">
+                      <div className="legend-color" style={{ backgroundColor: 'rgb(255,165,0)' }}></div>
+                      <span>高密度</span>
+                    </div>
+                    <div className="legend-item">
+                      <div className="legend-color" style={{ backgroundColor: 'rgb(255,0,0)' }}></div>
+                      <span>最高密度</span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
+
+            {/* 時間窓設定 */}
+            {showHeatmapLayer && (
+              <div className="time-window-settings">
+                <div className="time-window-title">
+                  時間窓: {timeWindowMinutes}分
+                  <span style={{ color: '#ff9800', fontSize: '10px' }}> (ヒートマップ)</span>
+                </div>
+                <div className="time-window-buttons">
+                  <button
+                    onClick={() => setTimeWindowMinutes(1)}
+                    className={`time-window-btn ${timeWindowMinutes === 1 ? 'active' : ''}`}
+                  >
+                    1分
+                  </button>
+                  <button
+                    onClick={() => setTimeWindowMinutes(15)}
+                    className={`time-window-btn ${timeWindowMinutes === 15 ? 'active' : ''}`}
+                  >
+                    15分
+                  </button>
+                  <button
+                    onClick={() => setTimeWindowMinutes(30)}
+                    className={`time-window-btn ${timeWindowMinutes === 30 ? 'active' : ''}`}
+                  >
+                    30分
+                  </button>
+                  <button
+                    onClick={() => setTimeWindowMinutes(60)}
+                    className={`time-window-btn ${timeWindowMinutes === 60 ? 'active' : ''}`}
+                  >
+                    1時間
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
+        </div>
+
+        {/* Windy風の時間コントロール（下部固定） */}
+        <div className="datetime-controls">
+          <DateTime 
+            currentDate={selectedDateTime.toString()} 
+            setDateTime={(dateStr: string) => setSelectedDateTime(new Date(dateStr))} 
+            availableTimes={availableTimes}
+            timeWindowMinutes={timeWindowMinutes}
+            setTimeWindowMinutes={setTimeWindowMinutes}
+          />
         </div>
       </div>
     </>

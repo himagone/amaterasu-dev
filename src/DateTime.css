@@ -1,107 +1,110 @@
+/* Windy風のシンプルな時間コントロール */
 .datetime {
   display: flex;
-  flex-direction: row;
   align-items: center;
-  gap: 10px;
-  animation: slideUp 0.5s ease-out;
+  gap: 16px;
+  color: white;
 }
 
-.datetime input {
-  padding: 5px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+.time-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.datetime input:focus {
-  border-color: #2196F3;
-  box-shadow: 0 0 8px rgba(33, 150, 243, 0.5);
+.time-display input {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.time-display input:focus {
   outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.time-display input:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 .player {
   display: flex;
-  gap: 5px;
+  align-items: center;
+  gap: 8px;
 }
 
 .player button {
-  background-color: transparent;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  padding: 5px 10px;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  position: relative;
-  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 14px;
 }
 
 .player button:hover {
-  background-color: #f5f5f5;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
 }
 
 .player button:active {
-  transform: translateY(0);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  transform: scale(0.95);
 }
 
-.player button.active {
-  background-color: #2196F3 !important;
-  color: white;
-  border-color: #2196F3;
-  animation: pulse 2s infinite;
+.player button[title*="一時停止"] {
+  background: rgba(255, 107, 0, 0.2);
 }
 
-.player button svg {
-  transition: transform 0.3s ease;
+.player button[title*="一時停止"]:hover {
+  background: rgba(255, 107, 0, 0.3);
 }
 
-.player button:hover svg {
-  transform: scale(1.2);
-}
-
-/* アニメーションキーフレーム */
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.4);
-  }
-  70% {
-    box-shadow: 0 0 0 10px rgba(33, 150, 243, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(33, 150, 243, 0);
-  }
-}
-
-/* 時間更新時のトランジション */
+/* 時間更新アニメーション */
 .time-update {
-  animation: fadeInOut 0.5s ease-in-out;
+  animation: timeUpdatePulse 0.5s ease;
 }
 
-@keyframes fadeInOut {
+@keyframes timeUpdatePulse {
   0% {
-    opacity: 0.5;
-    transform: scale(0.95);
+    transform: scale(1);
   }
   50% {
-    opacity: 1;
-    transform: scale(1.05);
+    transform: scale(1.02);
+    background: rgba(102, 126, 234, 0.2);
   }
   100% {
-    opacity: 1;
     transform: scale(1);
+  }
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .datetime {
+    gap: 12px;
+  }
+  
+  .time-display input {
+    font-size: 11px;
+    padding: 5px 8px;
+  }
+  
+  .player button {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
   }
 }

@@ -26,12 +26,8 @@ type Props = {
   currentDate: string;
   setDateTime: Function;
   availableTimes?: Set<string>;
-  showHumanFlowParticles?: boolean;
-  showHeatmapLayer?: boolean;
-  map?: any;
   timeWindowMinutes?: number;
   setTimeWindowMinutes?: (minutes: number) => void;
-  manualFetchHeatmap?: (() => void) | null;
 };
 
 let timer: ReturnType<typeof setInterval> | null = null;
@@ -44,71 +40,6 @@ function DateTime(props: Props) {
   const timeDisplayRef = useRef<HTMLDivElement>(null);
 
   const ref = useRef<HTMLDivElement>(null)
-
-  // パーティクルレイヤー更新（シンプル版）
-  const updateParticleLayer = async (newTime: Date) => {
-    if (!props.map) return;
-    
-    try {
-      // 既存のパーティクルレイヤーを削除
-      if (props.map.getLayer('human-flow-particles')) {
-        props.map.removeLayer('human-flow-particles');
-      }
-      if (props.map.getSource('human-flow-source')) {
-        props.map.removeSource('human-flow-source');
-      }
-      
-      // TileJSONを取得
-      const timestamp = `${newTime.toISOString().slice(0, 19)}`;
-      const timeWindowMinutes = props.timeWindowMinutes || 30;
-      const tileJsonUrl = `http://localhost:8080/api/v1/flow-vectors/tile.json?timestamp=${timestamp}&timeWindowMinutes=${timeWindowMinutes}`;
-      
-      const response = await fetch(tileJsonUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch TileJSON: ${response.status}`);
-      }
-      
-      const tileJsonData = await response.json();
-      
-      // タイルURLテンプレートを取得してパラメータを追加
-      const tileUrlTemplate = tileJsonData.tiles[0];
-      const tileUrlWithParams = `${tileUrlTemplate}?timestamp=${timestamp}&timeWindowMinutes=${timeWindowMinutes}`;
-      
-      props.map.addSource('human-flow-source', {
-        'type': 'raster-array',
-        'tiles': [tileUrlWithParams],
-        'tileSize': 256,
-        'minzoom': tileJsonData.minzoom || 0,
-        'maxzoom': tileJsonData.maxzoom || 14
-      });
-      
-      props.map.addLayer({
-        'id': 'human-flow-particles',
-        'type': 'raster-particle',
-        'source': 'human-flow-source',
-        'source-layer': 'flow-vectors',
-        'paint': {
-          'raster-particle-speed-factor': 0.3,
-          'raster-particle-fade-opacity-factor': 0.8,
-          'raster-particle-reset-rate-factor': 0.2,
-          'raster-particle-count': 3000,
-          'raster-particle-max-speed': 30,
-          'raster-particle-color': [
-            'interpolate',
-            ['linear'],
-            ['raster-particle-speed'],
-            0, 'rgba(30,144,255,200)',
-            3, 'rgba(0,255,127,200)',
-            8, 'rgba(255,255,0,200)',
-            15, 'rgba(255,165,0,200)',
-            25, 'rgba(255,69,0,255)'
-          ]
-        }
-      });
-    } catch (error) {
-      console.warn('Failed to update particle layer:', error);
-    }
-  }
 
   // 時間が更新されたときのアニメーション
   useEffect(() => {
@@ -144,16 +75,6 @@ function DateTime(props: Props) {
     current.setMinutes(current.getMinutes() + (direction * stepMinutes));
     props.setDateTime(current.toString());
     updateDateTimeDisplay(current);
-    
-    // パーティクルレイヤーの場合は更新
-    if (props.showHumanFlowParticles) {
-      updateParticleLayer(current);
-    }
-    
-    // ヒートマップレイヤーの場合は手動fetch
-    if (props.showHeatmapLayer && props.manualFetchHeatmap) {
-      props.manualFetchHeatmap();
-    }
   }
   
   const playNormal = (direction: number, buttonIndex: number) => {
@@ -174,15 +95,6 @@ function DateTime(props: Props) {
     props.setDateTime(current.toString());
     updateDateTimeDisplay(current);
     
-    if (props.showHumanFlowParticles) {
-      updateParticleLayer(current);
-    }
-    
-    // ヒートマップレイヤーの場合は手動fetch
-    if (props.showHeatmapLayer && props.manualFetchHeatmap) {
-      props.manualFetchHeatmap();
-    }
-    
     // 現在の時間を保持
     const lastDateTime = new Date(current);
     
@@ -191,15 +103,6 @@ function DateTime(props: Props) {
       lastDateTime.setMinutes(lastDateTime.getMinutes() + (direction * stepMinutes));
       props.setDateTime(lastDateTime.toString());
       updateDateTimeDisplay(lastDateTime);
-      
-      if (props.showHumanFlowParticles) {
-        updateParticleLayer(lastDateTime);
-      }
-      
-      // ヒートマップレイヤーの場合は手動fetch
-      if (props.showHeatmapLayer && props.manualFetchHeatmap) {
-        props.manualFetchHeatmap();
-      }
     }, normalInterval);
   }
   
@@ -223,29 +126,11 @@ function DateTime(props: Props) {
     props.setDateTime(current.toString());
     updateDateTimeDisplay(current);
     
-    if (props.showHumanFlowParticles) {
-      updateParticleLayer(current);
-    }
-    
-    // ヒートマップレイヤーの場合は手動fetch
-    if (props.showHeatmapLayer && props.manualFetchHeatmap) {
-      props.manualFetchHeatmap();
-    }
-    
     const lastDateTime = new Date(current);
     timer = setInterval(() => {
       lastDateTime.setMinutes(lastDateTime.getMinutes() + (direction * stepMinutes));
       props.setDateTime(lastDateTime.toString());
       updateDateTimeDisplay(lastDateTime);
-      
-      if (props.showHumanFlowParticles) {
-        updateParticleLayer(lastDateTime);
-      }
-      
-      // ヒートマップレイヤーの場合は手動fetch
-      if (props.showHeatmapLayer && props.manualFetchHeatmap) {
-        props.manualFetchHeatmap();
-      }
     }, fastInterval);
   }
   
@@ -275,11 +160,7 @@ function DateTime(props: Props) {
     if (timer) clearInterval(timer);
     setTheDate(e.target.value);
     setIsUpdating(true);
-    
-    // パーティクルレイヤーの場合は更新
-    if (props.showHumanFlowParticles) {
-      updateParticleLayer(current);
-    }
+
   }
 
   const updateTime = (e: any) => {
@@ -294,11 +175,6 @@ function DateTime(props: Props) {
     if (timer) clearInterval(timer);
     setTheTime(e.target.value);
     setIsUpdating(true);
-    
-    // パーティクルレイヤーの場合は更新
-    if (props.showHumanFlowParticles) {
-      updateParticleLayer(current);
-    }
   }
   
   const pausePlayback = () => {
@@ -312,39 +188,18 @@ function DateTime(props: Props) {
   return (
     <>
       <div ref={ref} className="datetime">
-        {/* 時間窓設定 - パーティクルまたはヒートマップがONの時に表示 */}
-        {(props.showHumanFlowParticles || props.showHeatmapLayer) && (
-          <div className="time-window-settings">
-            <label>
-              時間: {props.timeWindowMinutes || 30}分 
-              {props.showHumanFlowParticles && <span style={{ color: '#2196F3', fontSize: '12px' }}> (パーティクル)</span>}
-              {props.showHeatmapLayer && <span style={{ color: '#FF6B00', fontSize: '12px' }}> (ヒートマップ)</span>}
-              <input 
-                type="range" 
-                min="1" 
-                max="180" 
-                step="1" 
-                value={props.timeWindowMinutes || 30} 
-                onChange={(e) => props.setTimeWindowMinutes && props.setTimeWindowMinutes(parseInt(e.target.value))}
-                className="slider"
-                style={{ display: 'block', width: '100%', marginTop: '5px' }}
-              />
-            </label>
-          </div>
-        )}
-
         <div ref={timeDisplayRef} className="time-display">
           <input type="date" min={minDate} max={maxDate} value={theDate} onChange={updateDate} />
           <input type="time" value={theTime} onChange={updateTime} />
         </div>
         <span className="player">
-          <button onClick={() => playSingleStep(-1)}>
+          <button onClick={() => playSingleStep(-1)} title="前のステップ">
             <FontAwesomeIcon icon={faCaretLeft} />
           </button>
-          <button onClick={pausePlayback}>
+          <button onClick={pausePlayback} title="一時停止">
             <FontAwesomeIcon icon={faPause} />
           </button>
-          <button onClick={() => playSingleStep(1)}>
+          <button onClick={() => playSingleStep(1)} title="次のステップ">
             <FontAwesomeIcon icon={faCaretRight} />
           </button>
         </span>
