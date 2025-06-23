@@ -50,13 +50,13 @@ const buildApiFilters = (filters: DemographicFilters) => {
       filterGroups.push({
         field: 'birthyear',
         operator: '>=',
-        value: minBirthYear.toString()
+        value: minBirthYear
       });
       
       filterGroups.push({
         field: 'birthyear',
         operator: '<=',
-        value: maxBirthYear.toString()
+        value: maxBirthYear
       });
     }
   }

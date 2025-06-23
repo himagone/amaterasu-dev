@@ -18,7 +18,7 @@ export interface DemographicRequest {
 export interface FilterCondition {
   field: string;
   operator: string;
-  value?: string;
+  value?: string | number;
   values?: string[];
 }
 
@@ -76,19 +76,25 @@ export const getBirthYearRangeFromAgeGroup = (ageGroup: string): { minYear: numb
   
   switch (ageGroup) {
     case '20代以下':
-      return { minYear: currentYear - 20, maxYear: currentYear };
+      // 0歳〜20歳: 20歳は (currentYear-20)年生まれ、0歳は (currentYear-1)年生まれ
+      return { minYear: currentYear - 20, maxYear: currentYear - 1 };
     case '30代':
+      // 30歳〜39歳: 39歳は (currentYear-39)年生まれ、30歳は (currentYear-30)年生まれ
       return { minYear: currentYear - 39, maxYear: currentYear - 30 };
     case '40代':
+      // 40歳〜49歳
       return { minYear: currentYear - 49, maxYear: currentYear - 40 };
     case '50代':
+      // 50歳〜59歳
       return { minYear: currentYear - 59, maxYear: currentYear - 50 };
     case '60代':
+      // 60歳〜69歳
       return { minYear: currentYear - 69, maxYear: currentYear - 60 };
     case '70代以上':
+      // 70歳以上
       return { minYear: 1900, maxYear: currentYear - 70 };
     default:
-      return { minYear: 1900, maxYear: currentYear };
+      return { minYear: 1900, maxYear: currentYear - 1 };
   }
 };
 
