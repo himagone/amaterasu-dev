@@ -79,9 +79,6 @@ function LoadingComponent(props: LoadingComponentProps) {
       <div className="simple-loading-container">
         <div className="simple-spinner" ref={spinnerRef}>
           <div className="spinner-ring"></div>
-          <div className="spinner-icon" ref={iconRef}>
-            🐱
-          </div>
         </div>
         <div className="simple-loading-text" ref={textRef}>
           {text}

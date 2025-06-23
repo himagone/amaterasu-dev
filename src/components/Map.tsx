@@ -24,6 +24,7 @@ type MaplibreGL = {
   addLayer: Function;
   getSource: Function;
   addControl: Function;
+  removeControl: Function;
   loaded: Function;
   getZoom: Function;
 }
@@ -32,6 +33,7 @@ function Map(props: Props) {
   const ref = useRef<HTMLDivElement | null>(null);
   const map = useRef<MaplibreGL | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const deckOverlayRef = useRef<any>(null);
 
   useEffect(() => {
     if (!ref.current) {
@@ -68,12 +70,31 @@ function Map(props: Props) {
   }, []);
 
   useEffect(() => {
-    if (!map.current || !props.deckOverlay || !mapLoaded) {
+    if (!map.current || !mapLoaded) {
       return;
     }
     
-    console.log('Adding deck overlay to map');
-    map.current.addControl(props.deckOverlay);
+    // 古いoverlayを削除
+    if (deckOverlayRef.current) {
+      try {
+        console.log('Removing old deck overlay');
+        map.current.removeControl(deckOverlayRef.current);
+        deckOverlayRef.current = null;
+      } catch (error) {
+        console.warn('Failed to remove old overlay:', error);
+      }
+    }
+    
+    // 新しいoverlayを追加
+    if (props.deckOverlay) {
+      try {
+        console.log('Adding deck overlay to map');
+        map.current.addControl(props.deckOverlay);
+        deckOverlayRef.current = props.deckOverlay;
+      } catch (error) {
+        console.error('Failed to add deck overlay:', error);
+      }
+    }
     
   }, [props.deckOverlay, mapLoaded]);
 

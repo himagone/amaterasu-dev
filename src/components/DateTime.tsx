@@ -23,8 +23,6 @@ type Props = {
   currentDate: string;
   setDateTime: Function;
   availableTimes?: Set<string>;
-  timeWindowMinutes?: number;
-  setTimeWindowMinutes?: (minutes: number) => void;
   onDateRangeSelect?: (start: Date, end: Date) => void;
   onApply?: () => Promise<void>;
   isMainMode?: boolean;

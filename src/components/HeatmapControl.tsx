@@ -9,8 +9,6 @@ interface HeatmapControlProps {
   setHeatmapData: (data: heatmapPoints[]) => void;
   heatmapError: string | null;
   setHeatmapError: (error: string | null) => void;
-  timeWindowMinutes: number;
-  setTimeWindowMinutes: (minutes: number) => void;
   dateRange: { start: Date; end: Date } | null;
   isLoading?: boolean;
 }
@@ -22,8 +20,6 @@ const HeatmapControl: React.FC<HeatmapControlProps> = ({
   setHeatmapData,
   heatmapError,
   setHeatmapError,
-  timeWindowMinutes,
-  setTimeWindowMinutes,
   dateRange,
   isLoading = false
 }) => {

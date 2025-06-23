@@ -12,7 +12,14 @@ export interface heatmapPoints {
   lat: number,
   lng: number,
   intensity: number,
-  value: number
+  value: number,
+  // 人口統計属性（オプション）
+  gender?: string,
+  ageGroup?: string,
+  occupation?: string,
+  prefecture?: string,
+  incomeRange?: string,
+  timestamp?: string
 }
 
 export interface heatmapRequestParam {

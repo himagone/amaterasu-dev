@@ -19,9 +19,6 @@ function Header() {
         <div className="center">
           <Search />
         </div>
-        <div className="right">
-          <a href="#"><FontAwesomeIcon icon={faUser} /> ◯◯◯◯</a>
-        </div>
       </div>
     </>
   )

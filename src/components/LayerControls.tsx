@@ -1,5 +1,7 @@
 import React from 'react';
 import HeatmapControl from './HeatmapControl';
+import DemographicFilter from './DemographicFilter';
+import { DemographicFilters } from '../types/demographicData';
 
 interface HeatmapPoint {
   h3Index: string;
@@ -36,8 +38,6 @@ interface LayerControlsProps {
   heatmapError: string | null;
   setHeatmapError: (error: string | null) => void;
   isHeatmapLoading: boolean;
-  timeWindowMinutes: number;
-  setTimeWindowMinutes: (minutes: number) => void;
   dateRange: { start: Date; end: Date } | null;
   showH3Heatmap?: boolean;
   setShowH3Heatmap?: (show: boolean) => void;
@@ -46,6 +46,12 @@ interface LayerControlsProps {
   h3Data?: H3HeatmapData[];
   personCountRangesH3?: PersonCountRangeH3[];
   setPersonCountRangesH3?: (ranges: PersonCountRangeH3[]) => void;
+  // 人口統計フィルター関連
+  onDemographicFiltersChange?: (filters: DemographicFilters) => void;
+  onApplyDemographicFilters?: () => void;
+  isDemographicLoading?: boolean;
+  demographicError?: string | null;
+  setDemographicError?: (error: string | null) => void;
 }
 
 const LayerControls: React.FC<LayerControlsProps> = ({
@@ -58,8 +64,6 @@ const LayerControls: React.FC<LayerControlsProps> = ({
   heatmapError,
   setHeatmapError,
   isHeatmapLoading,
-  timeWindowMinutes,
-  setTimeWindowMinutes,
   dateRange,
   showH3Heatmap = false,
   setShowH3Heatmap,
@@ -67,7 +71,13 @@ const LayerControls: React.FC<LayerControlsProps> = ({
   setShowH3Layer,
   h3Data = [],
   personCountRangesH3 = [],
-  setPersonCountRangesH3
+  setPersonCountRangesH3,
+  // 人口統計フィルター関連
+  onDemographicFiltersChange,
+  onApplyDemographicFilters,
+  isDemographicLoading = false,
+  demographicError,
+  setDemographicError
 }) => {
   return (
     <div className={`visualization-controls ${isControlsCollapsed ? 'collapsed' : ''}`}>
@@ -86,10 +96,17 @@ const LayerControls: React.FC<LayerControlsProps> = ({
           setHeatmapData={setHeatmapData}
           heatmapError={heatmapError}
           setHeatmapError={setHeatmapError}
-          timeWindowMinutes={timeWindowMinutes}
-          setTimeWindowMinutes={setTimeWindowMinutes}
           dateRange={dateRange}
         />
+        
+        {/* 人口統計フィルター */}
+        {onDemographicFiltersChange && onApplyDemographicFilters && (
+          <DemographicFilter
+            onFiltersChange={onDemographicFiltersChange}
+            onApplyFilters={onApplyDemographicFilters}
+            isLoading={isDemographicLoading}
+          />
+        )}
         
         {/* H3ヒートマップ制御パネル */}
 
