@@ -1,0 +1,582 @@
+/* Windy風のシンプルな時間コントロール */
+.datetime {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: white;
+}
+
+.time-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.time-display input {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.time-display input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.time-display input:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.player {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.player button {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-size: 14px;
+}
+
+.player button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+.player button:active {
+  transform: scale(0.95);
+}
+
+.player button[title*="一時停止"] {
+  background: rgba(255, 107, 0, 0.2);
+}
+
+.player button[title*="一時停止"]:hover {
+  background: rgba(255, 107, 0, 0.3);
+}
+
+/* 時間更新アニメーション */
+.time-update {
+  animation: timeUpdatePulse 0.5s ease;
+}
+
+@keyframes timeUpdatePulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+    background: rgba(102, 126, 234, 0.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .datetime {
+    gap: 12px;
+  }
+  
+  .time-display input {
+    font-size: 16px;
+    padding: 5px 8px;
+  }
+  
+  .player button {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+}
+
+/* カレンダー・時間選択 UI - コンパクト化 */
+.datetime-container {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+  color: #333;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+/* Schedule Header - コンパクト化 */
+.schedule-header {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.schedule-header h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin: 0 0 6px 0;
+}
+
+.current-date {
+  font-size: 16px;
+  color: #666;
+  font-weight: 400;
+}
+
+/* Year Navigation - コンパクト化 */
+.year-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.year-display {
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+  min-width: 55px;
+  text-align: center;
+}
+
+.nav-button {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(66, 133, 244, 0.1);
+  color: #4285f4;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.nav-button:hover {
+  background: rgba(66, 133, 244, 0.2);
+  transform: scale(1.05);
+}
+
+.nav-button:active {
+  transform: scale(0.95);
+}
+
+/* Month Navigation - コンパクト化 */
+.month-navigation {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+  /* スワイプ機能のためのスタイル */
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  position: relative;
+}
+
+/* 横スクロール可能な月選択コンテナ */
+.month-scroll-container {
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.month-tabs-scrollable {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch; /* iOS用の滑らかなスクロール */
+  scrollbar-width: none; /* Firefox用 */
+  -ms-overflow-style: none; /* IE用 */
+  /* スワイプ機能のためのスタイル */
+  touch-action: pan-x;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+}
+
+/* スクロールバーを非表示 */
+.month-tabs-scrollable::-webkit-scrollbar {
+  display: none;
+}
+
+.month-tabs-container {
+  flex: 1;
+  overflow: hidden;
+  /* スワイプ機能のためのスタイル */
+  touch-action: pan-y;
+  position: relative;
+}
+
+.month-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  min-width: fit-content;
+  white-space: nowrap;
+}
+
+.month-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.month-tab {
+  background: rgba(66, 133, 244, 0.1);
+  border: none;
+  border-radius: 16px;
+  padding: 8px 14px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #4285f4;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-width: 50px;
+  text-align: center;
+}
+
+.month-tab.active {
+  background: #4285f4;
+  color: white;
+}
+
+.month-tab:hover {
+  background: rgba(66, 133, 244, 0.2);
+  transform: translateY(-1px);
+}
+
+
+@keyframes fadeInHint {
+  0% { opacity: 0; transform: translateX(-50%) translateY(5px); }
+  20% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  80% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-5px); }
+}
+
+/* タッチデバイスでのみヒントを表示 */
+@media (hover: none) {
+  .swipe-hint {
+    display: block;
+  }
+}
+
+@media (hover: hover) {
+  .swipe-hint {
+    display: none;
+  }
+}
+
+/* Calendar - コンパクト化 */
+.calendar {
+  margin-bottom: 16px;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  transition: transform 0.3s ease;
+}
+
+.calendar-header {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 8px;
+  padding: 6px 0;
+}
+
+.weekday-header {
+  text-align: center;
+  font-size: 16px;
+  font-weight: 600;
+  color: #666;
+  padding: 4px 0;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  touch-action: manipulation;
+}
+
+.calendar-day {
+  aspect-ratio: 1;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.calendar-day:hover {
+  background: rgba(66, 133, 244, 0.1);
+}
+
+.calendar-day.other-month {
+  color: #ccc;
+}
+
+.calendar-day.today {
+  background: rgba(66, 133, 244, 0.1);
+  color: #4285f4;
+  font-weight: 600;
+}
+
+.calendar-day.selected {
+  background: #4285f4;
+  color: white;
+  font-weight: 600;
+}
+
+/* タッチ操作時の視覚的フィードバック */
+.calendar-day:active {
+  transform: scale(0.95);
+  background: rgba(66, 133, 244, 0.2);
+}
+
+.month-tab:active {
+  transform: scale(0.95);
+}
+
+.nav-button:active {
+  transform: scale(0.9);
+}
+
+/* スワイプ時のアニメーション */
+.calendar.swiping {
+  transition: transform 0.1s ease-out;
+}
+
+.month-navigation.swiping {
+  transition: transform 0.1s ease-out;
+}
+
+/* Event Dots - コンパクト化 */
+.event-dots {
+  display: flex;
+  gap: 1px;
+  margin-top: 1px;
+}
+
+.dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+}
+
+.dot.blue {
+  background: #4285f4;
+}
+
+.dot.orange {
+  background: #ff9500;
+}
+
+.dot.green {
+  background: #34c759;
+}
+
+/* Time Slider - コンパクト化 */
+.time-slider-container {
+  margin-bottom: 16px;
+}
+
+.time-range-display {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+}
+
+.dual-range-slider {
+  position: relative;
+  height: 6px;
+  background: #e8e8e8;
+  border-radius: 3px;
+  margin: 12px 0;
+}
+
+.dual-range-slider::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  height: 6px;
+  background: #4285f4;
+  border-radius: 3px;
+  left: calc(var(--start-percent) * 1%);
+  width: calc((var(--end-percent) - var(--start-percent)) * 1%);
+}
+
+.range-input {
+  position: absolute;
+  top: -7px;
+  left: 0;
+  width: 100%;
+  height: 20px;
+  background: transparent;
+  outline: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  pointer-events: none;
+}
+
+.range-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #4285f4;
+  cursor: pointer;
+  pointer-events: all;
+  border: 2px solid white;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: transform 0.1s ease;
+}
+
+.range-input::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+}
+
+.range-input::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #4285f4;
+  cursor: pointer;
+  pointer-events: all;
+  border: 2px solid white;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: transform 0.1s ease;
+}
+
+.range-input::-moz-range-thumb:hover {
+  transform: scale(1.1);
+}
+
+/* Apply Button - コンパクト化 */
+.apply-button {
+  width: 100%;
+  background: #4285f4;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.apply-button:hover {
+  background: #3367d6;
+  transform: translateY(-1px);
+}
+
+.apply-button:active {
+  transform: translateY(0);
+}
+
+/* Modal Styles */
+.time-picker-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  max-width: 380px;
+  width: 90vw;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-content h3 {
+  text-align: center;
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.modal-calendar {
+  margin-bottom: 16px;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 480px) {
+  .datetime-container {
+    padding: 16px;
+    margin: 16px;
+  }
+  
+  .year-navigation {
+    gap: 10px;
+  }
+  
+  .year-display {
+    font-size: 14px;
+  }
+  
+  .nav-button {
+    width: 26px;
+    height: 26px;
+  }
+  
+  .month-tab {
+    padding: 5px 8px;
+    font-size: 10px;
+  }
+  
+  .calendar-day {
+    min-height: 28px;
+    font-size: 11px;
+  }
+  
+  .time-range-display {
+    font-size: 11px;
+  }
+}

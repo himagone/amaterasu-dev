@@ -1,0 +1,125 @@
+/* 選択された時間範囲表示 */
+.selected-date-range {
+  margin-top: 8px;
+  padding: 8px;
+  background-color: rgba(255, 152, 0, 0.1);
+  border: 1px solid rgba(255, 152, 0, 0.3);
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+.selected-date-range-title {
+  font-weight: bold;
+  color: #ff9800;
+  margin-bottom: 4px;
+}
+
+.selected-date-range-content {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.selected-date-range-separator {
+  margin: 0 4px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* レジェンド */
+.legend {
+  margin-top: 12px;
+}
+
+.legend-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.legend-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.legend-color {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.legend-color-1 { background-color: rgb(65, 105, 225); }
+.legend-color-2 { background-color: rgb(0, 191, 255); }
+.legend-color-3 { background-color: rgb(0, 255, 127); }
+.legend-color-4 { background-color: rgb(154, 205, 50); }
+.legend-color-5 { background-color: rgb(255, 255, 0); }
+.legend-color-6 { background-color: rgb(255, 215, 0); }
+.legend-color-7 { background-color: rgb(255, 140, 0); }
+.legend-color-8 { background-color: rgb(255, 69, 0); }
+.legend-color-9 { background-color: rgb(139, 0, 0); }
+
+.legend-range-info {
+  margin-top: 8px;
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* 時間窓設定 */
+.time-window-settings {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.time-window-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.time-window-label {
+  color: #ff9800;
+  font-size: 10px;
+}
+
+.time-window-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.time-window-btn {
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: center;
+}
+
+.time-window-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: white;
+}
+
+.time-window-btn.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-color: #667eea;
+  color: white;
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+} 

@@ -8,7 +8,6 @@
   box-sizing: border-box;
   padding: 16px;
   height: 53px;
-  width: calc(100% - 16px);
   display: flex;
   align-items: center;
   background-color: rgba(255, 255, 255, 0.7);
@@ -34,10 +33,7 @@
   text-align: center;
 }
 
-.map {
-  height: 100%;
-  width: 100%;
-}
+/* Map styles moved to Map.css */
 
 .maplibregl-ctrl-top-right
 {
@@ -277,84 +273,9 @@ a {
   margin-bottom: 8px;
 }
 
-.layer-info .legend {
-  margin-top: 12px;
-}
 
-.layer-info .legend-title {
-  font-size: 11px;
-  font-weight: 600;
-  margin-bottom: 6px;
-  color: rgba(255, 255, 255, 0.8);
-}
 
-.legend-items {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
 
-.legend-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 10px;
-  color: rgba(255, 255, 255, 0.7);
-}
-
-.legend-color {
-  width: 12px;
-  height: 12px;
-  border-radius: 2px;
-  flex-shrink: 0;
-}
-
-/* Windy風の時間窓ボタン */
-.time-window-settings {
-  padding: 16px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.time-window-title {
-  font-size: 12px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.8);
-  margin-bottom: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.time-window-buttons {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-}
-
-.time-window-btn {
-  padding: 8px 12px;
-  font-size: 11px;
-  font-weight: 500;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.8);
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  text-align: center;
-}
-
-.time-window-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.3);
-  color: white;
-}
-
-.time-window-btn.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-color: #667eea;
-  color: white;
-  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-}
 
 /* Windy風の時間コントロール（下部固定） */
 .datetime-controls {
@@ -473,6 +394,254 @@ a {
     width: calc(100vw - 40px);
     left: 20px;
     transform: none;
+  }
+}
+
+/* UXフロー用のスタイル */
+.date-selection-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 2000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.overlay-background {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(5px);
+}
+
+.date-selection-modal {
+  position: relative;
+  z-index: 2001;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+/* ローディングスタイルはLoadingComponent.cssに移動 */
+
+.main-content {
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+.main-content.disabled-overlay {
+  opacity: 0.4;
+  pointer-events: none;
+  filter: blur(2px);
+}
+
+/* DateTimeコンポーネントのモード別スタイル */
+.datetime-container.main-mode {
+  position: relative;
+  transform: none;
+  left: auto;
+  bottom: auto;
+  width: auto;
+  max-width: 450px;
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: none;
+}
+
+.datetime-container.main-mode .schedule-header h2 {
+  font-size: 22px;
+  color: #333;
+  margin-bottom: 12px;
+}
+
+.datetime-container.compact-mode {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1;
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 12px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  max-width: 300px;
+  transform: scale(0.8);
+  transform-origin: bottom right;
+}
+
+/* DateTimeコンポーネント用のcompactコントロール */
+.datetime-controls-compact {
+  position: fixed;
+  bottom: 20px;
+  right: 340px; /* visualization-controlsの左に配置 */
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  width: 300px;
+  max-height: 70vh;
+  overflow-y: auto;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 999;
+  color: #333;
+}
+
+.datetime-controls-compact.collapsed {
+  width: 60px;
+  height: 60px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.datetime-controls-compact.collapsed .datetime-header {
+  padding: 0;
+  border-bottom: none;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+}
+
+.datetime-controls-compact.collapsed .datetime-header h2 {
+  display: none;
+}
+
+.datetime-controls-compact.collapsed .toggle-datetime-btn {
+  font-size: 20px;
+  padding: 0;
+}
+
+.datetime-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  user-select: none;
+}
+
+.datetime-header h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #333;
+}
+
+.toggle-datetime-btn {
+  background: none;
+  border: none;
+  color: rgba(0, 0, 0, 0.6);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.toggle-datetime-btn:hover {
+  color: #333;
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.datetime-content {
+  padding: 0;
+  opacity: 1;
+  transition: opacity 0.3s ease;
+}
+
+.datetime-controls-compact.collapsed .datetime-content {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* DateTimeコンポーネント内のスタイル調整 */
+.datetime-controls-compact .datetime-container {
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 16px 20px;
+}
+
+.datetime-controls-compact .datetime-container.compact-mode {
+  position: static;
+  transform: none;
+  max-width: none;
+  background: transparent;
+  box-shadow: none;
+}
+
+.datetime-container.compact-mode .schedule-header h2 {
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.datetime-container.compact-mode .calendar-grid {
+  font-size: 12px;
+}
+
+.datetime-container.compact-mode .calendar-day {
+  padding: 4px;
+  font-size: 11px;
+}
+
+.apply-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%;
+  margin-top: 16px;
+}
+
+.apply-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+}
+
+.apply-button:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .date-selection-modal {
+    margin: 15px;
+    max-width: calc(100vw - 30px);
+  }
+  
+  .datetime-container.main-mode {
+    padding: 15px;
+    max-width: none;
+  }
+  
+  .datetime-container.compact-mode {
+    right: 10px;
+    bottom: 10px;
+    max-width: 250px;
+  }
+  
+  .datetime-controls-compact {
+    width: calc(100vw - 40px);
+    right: 20px;
+    left: 20px;
+    bottom: 80px; /* visualization-controlsの上に配置 */
   }
 }
 

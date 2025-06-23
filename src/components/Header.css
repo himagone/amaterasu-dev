@@ -8,10 +8,6 @@
   width: 110px;
 }
 
-.header .center {
-  width: calc(100% - 220px);
-}
-
 .header .right {
   text-align: right;
 }
