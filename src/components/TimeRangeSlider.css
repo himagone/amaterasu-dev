@@ -1,0 +1,372 @@
+.windy-time-slider {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(44, 44, 44, 0.95);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 8px 16px;
+  z-index: 1000;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  color: white;
+}
+
+/* 選択範囲インジケーター */
+.selection-indicator {
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(248, 148, 6, 0.9);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.selection-indicator::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: rgba(248, 148, 6, 0.9);
+}
+
+.selection-text {
+  white-space: nowrap;
+}
+
+/* メインタイムラインコンテナ */
+.timeline-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 60px;
+}
+
+/* 再生ボタン */
+.play-button {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.play-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.play-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.play-button.playing {
+  background: rgba(248, 148, 6, 0.8);
+  border-color: rgba(248, 148, 6, 1);
+}
+
+/* タイムライン */
+.timeline {
+  flex: 1;
+  position: relative;
+  height: 60px;
+  margin: 0 8px;
+}
+
+/* タイムライントラック */
+.timeline-track {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+  transform: translateY(-50%);
+}
+
+/* 選択範囲の強調表示 */
+.selection-range {
+  position: absolute;
+  top: 50%;
+  height: 6px;
+  background: linear-gradient(90deg, #ff8c00, #ffa500);
+  border-radius: 3px;
+  transform: translateY(-50%);
+  box-shadow: 0 0 8px rgba(255, 140, 0, 0.6);
+  z-index: 2;
+}
+
+/* レンジスライダー */
+.range-slider {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 20px;
+  background: transparent;
+  appearance: none;
+  border-radius: 10px;
+  outline: none;
+  cursor: pointer;
+  transform: translateY(-50%);
+  z-index: 3;
+}
+
+.range-slider:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* Webkit browsers (Chrome, Safari) */
+.range-slider::-webkit-slider-track {
+  height: 20px;
+  background: transparent;
+  border-radius: 10px;
+}
+
+.range-slider::-webkit-slider-thumb {
+  appearance: none;
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background: #ff8c00;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+}
+
+.range-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 0 12px rgba(255, 140, 0, 0.8);
+}
+
+.range-slider::-webkit-slider-thumb:active {
+  transform: scale(1.3);
+}
+
+/* Firefox */
+.range-slider::-moz-range-track {
+  height: 20px;
+  background: transparent;
+  border-radius: 10px;
+  border: none;
+}
+
+.range-slider::-moz-range-thumb {
+  height: 16px;
+  width: 16px;
+  border-radius: 50%;
+  background: #ff8c00;
+  cursor: pointer;
+  border: 2px solid white;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* 開始と終了スライダーの区別 */
+.start-slider::-webkit-slider-thumb {
+  background: #20b2aa;
+}
+
+.start-slider::-moz-range-thumb {
+  background: #20b2aa;
+}
+
+.end-slider::-webkit-slider-thumb {
+  background: #ff8c00;
+}
+
+.end-slider::-moz-range-thumb {
+  background: #ff8c00;
+}
+
+/* 時間目盛り */
+.time-markers {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  pointer-events: none;
+}
+
+.date-group {
+  flex: 1;
+  position: relative;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.date-group:last-child {
+  border-right: none;
+}
+
+/* 日付ラベル */
+.date-label {
+  position: absolute;
+  top: -25px;
+  left: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  white-space: nowrap;
+}
+
+/* 時間目盛り */
+.hour-markers {
+  display: flex;
+  height: 100%;
+  position: relative;
+}
+
+.hour-marker {
+  flex: 1;
+  position: relative;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.hour-marker.major {
+  border-right-color: rgba(255, 255, 255, 0.2);
+}
+
+.hour-marker.major::after {
+  content: '';
+  position: absolute;
+  right: -1px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.hour-marker span {
+  position: absolute;
+  bottom: -18px;
+  right: -8px;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+}
+
+/* 適用ボタン */
+.apply-btn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: white;
+  padding: 8px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  min-width: 60px;
+}
+
+.apply-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.apply-btn:active {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.apply-btn:disabled {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .windy-time-slider {
+    padding: 6px 12px;
+  }
+
+  .timeline-container {
+    height: 50px;
+    gap: 8px;
+  }
+
+  .play-button {
+    width: 32px;
+    height: 32px;
+    font-size: 14px;
+  }
+
+  .timeline {
+    height: 50px;
+  }
+
+  .date-label {
+    font-size: 10px;
+    top: -20px;
+  }
+
+  .hour-marker span {
+    font-size: 9px;
+    bottom: -15px;
+  }
+
+  .apply-btn {
+    padding: 6px 12px;
+    font-size: 11px;
+    min-width: 50px;
+  }
+
+  .selection-indicator {
+    top: -35px;
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .windy-time-slider {
+    padding: 4px 8px;
+  }
+
+  .timeline-container {
+    height: 45px;
+    gap: 6px;
+  }
+
+  .play-button {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+
+  .timeline {
+    height: 45px;
+    margin: 0 4px;
+  }
+
+  .date-label {
+    display: none; /* 非常に狭い画面では日付ラベルを非表示 */
+  }
+
+  .hour-marker span {
+    display: none; /* 非常に狭い画面では時間ラベルを非表示 */
+  }
+} 

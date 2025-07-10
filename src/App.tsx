@@ -10,7 +10,7 @@ import { ScatterplotLayer, IconLayer } from '@deck.gl/layers';
 import {Deck, PickingInfo} from '@deck.gl/core';
 import { cellToLatLng } from 'h3-js';
 import { easeCubic } from 'd3-ease';
-import DateTime from './components/DateTime'
+import TimeRangeSlider from './components/TimeRangeSlider'
 import LayerControls from './components/LayerControls'
 import LoadingComponent from './components/LoadingComponent'
 import getHeatmapData from './utils/getHeatmap'
@@ -56,7 +56,7 @@ const getZoomLevelFile = (zoom: number): string => {
 
 function App() {
   // UXフローの状態管理
-  const [currentPhase, setCurrentPhase] = useState<UXPhase>(UXPhase.DATE_SELECTION);
+  const [currentPhase, setCurrentPhase] = useState<UXPhase>(UXPhase.ANALYSIS);
   const [dateRange, setDateRange] = useState<{start: Date, end: Date} | null>(null);
   const [loadingProgress, setLoadingProgress] = useState<number>(0);
   const [loadingStep, setLoadingStep] = useState<string>('');
@@ -464,11 +464,11 @@ function App() {
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
         console.log('Request was cancelled');
-        setCurrentPhase(UXPhase.DATE_SELECTION);
+        setCurrentPhase(UXPhase.ANALYSIS);
       } else {
         console.error('Error fetching heatmap data:', error);
         setHeatmapError(error instanceof Error ? error.message : 'Unknown error');
-        setCurrentPhase(UXPhase.DATE_SELECTION);
+        setCurrentPhase(UXPhase.ANALYSIS);
       }
     } finally {
       setAbortController(null);
@@ -480,22 +480,7 @@ function App() {
   return (
     <>
       <div className="app">
-        {/* オーバーレイ - DATE_SELECTION段階でのみ表示 */}
-        {currentPhase === UXPhase.DATE_SELECTION && (
-          <div className="date-selection-overlay">
-            <div className="overlay-background"></div>
-            <div className="date-selection-modal">
-              <DateTime 
-                currentDate={selectedDateTime.toString()} 
-                setDateTime={(dateStr: string) => setSelectedDateTime(new Date(dateStr))} 
-                availableTimes={availableTimes}
-                onDateRangeSelect={handleDateRangeSelect}
-                onApply={handleApplyDateRange}
-                isMainMode={true}
-              />
-            </div>
-          </div>
-        )}
+
 
         {/* ローディング表示 - React Awesome Loaders使用 */}
         {currentPhase === UXPhase.LOADING && (
@@ -506,7 +491,7 @@ function App() {
         )}
 
         {/* メインコンテンツ - 透過度とインタラクション制御 */}
-        <div className={`main-content ${currentPhase === UXPhase.DATE_SELECTION ? 'disabled-overlay' : ''}`}>
+        <div className={`main-content ${currentPhase === UXPhase.LOADING ? 'disabled-overlay' : ''}`}>
           <Header />
           <Map 
             currentDate={currentDate} 
@@ -537,6 +522,13 @@ function App() {
             demographicError={demographicError}
             setDemographicError={setDemographicError}
            />
+
+          {/* タイムスライダー */}
+          <TimeRangeSlider 
+            onDateRangeSelect={handleDateRangeSelect}
+            onApply={handleApplyDateRange}
+            isLoading={currentPhase === UXPhase.LOADING}
+          />
 
         </div>
       </div>
