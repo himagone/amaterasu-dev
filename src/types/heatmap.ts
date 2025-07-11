@@ -7,6 +7,26 @@ export interface heatmapResponse {
   points: Array<heatmapPoints>
 }
 
+// timeseries APIのレスポンス型
+export interface heatmapTimeseriesResponse {
+  data?: Array<{
+    timestamp: string,
+    points: Array<heatmapPoints>
+  }>,
+  // 実際のAPIレスポンス構造
+  aggregatedPoints?: Array<heatmapPoints>,
+  timeSlices?: Array<{
+    timestamp?: string,
+    time?: string,
+    points?: Array<heatmapPoints>
+  }>,
+  startTime?: string,
+  endTime?: string,
+  intervalMinutes?: number,
+  resolution?: string,
+  executionTimeMs?: number
+}
+
 export interface heatmapPoints {
   h3Index: string,
   lat: number,
@@ -27,6 +47,15 @@ export interface heatmapRequestParam {
   endTime: string,
   bbox: bbox,
   zoom: number
+}
+
+// timeseries APIのリクエストパラメータ型
+export interface heatmapTimeseriesRequestParam {
+  startTime: string,
+  endTime: string,
+  bbox: bbox,
+  zoom: number,
+  intervalMinutes: number
 }
 
 export interface pointsRequestParam {

@@ -79,37 +79,77 @@ const LayerControls: React.FC<LayerControlsProps> = ({
   demographicError,
   setDemographicError
 }) => {
+  const [showAdvancedSettings, setShowAdvancedSettings] = React.useState(false);
+
   return (
     <div className={`visualization-controls ${isControlsCollapsed ? 'collapsed' : ''}`}>
       <div className="controls-header" onClick={() => setIsControlsCollapsed(!isControlsCollapsed)}>
-        <h2>レイヤー</h2>
+        <h2>データ表示設定</h2>
         <button className="toggle-controls-btn" type="button">
-          {isControlsCollapsed ? '☰' : '×'}
+          {isControlsCollapsed ? '⚙️' : '×'}
         </button>
       </div>
       
       <div className="controls-content">
-        <HeatmapControl
-          showHeatmapLayer={showHeatmapLayer}
-          setShowHeatmapLayer={setShowHeatmapLayer}
-          heatmapData={heatmapData}
-          setHeatmapData={setHeatmapData}
-          heatmapError={heatmapError}
-          setHeatmapError={setHeatmapError}
-          dateRange={dateRange}
-        />
-        
-        {/* 人口統計フィルター */}
-        {onDemographicFiltersChange && onApplyDemographicFilters && (
-          <DemographicFilter
-            onFiltersChange={onDemographicFiltersChange}
-            onApplyFilters={onApplyDemographicFilters}
-            isLoading={isDemographicLoading}
-          />
-        )}
-        
-        {/* H3ヒートマップ制御パネル */}
+        {/* 簡易コントロール */}
+        <div className="basic-controls">
+          <div className="control-section">
+            <h3>💡 人流データ表示</h3>
+            <div className="simple-toggle">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={showHeatmapLayer}
+                  onChange={(e) => setShowHeatmapLayer(e.target.checked)}
+                />
+                ヒートマップを表示
+              </label>
+            </div>
+            {isHeatmapLoading && (
+              <div className="loading-indicator">
+                <span>📊 データを読み込み中...</span>
+              </div>
+            )}
+            {heatmapError && (
+              <div className="error-indicator">
+                <span>⚠️ {heatmapError}</span>
+              </div>
+            )}
+          </div>
+        </div>
 
+        {/* 詳細設定 */}
+        <div className="advanced-settings">
+          <button 
+            className="advanced-toggle-btn"
+            onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
+          >
+            🔧 詳細設定 {showAdvancedSettings ? '▼' : '▶'}
+          </button>
+          
+          {showAdvancedSettings && (
+            <div className="advanced-content">
+              <HeatmapControl
+                showHeatmapLayer={showHeatmapLayer}
+                setShowHeatmapLayer={setShowHeatmapLayer}
+                heatmapData={heatmapData}
+                setHeatmapData={setHeatmapData}
+                heatmapError={heatmapError}
+                setHeatmapError={setHeatmapError}
+                dateRange={dateRange}
+              />
+              
+              {/* 人口統計フィルター */}
+              {onDemographicFiltersChange && onApplyDemographicFilters && (
+                <DemographicFilter
+                  onFiltersChange={onDemographicFiltersChange}
+                  onApplyFilters={onApplyDemographicFilters}
+                  isLoading={isDemographicLoading}
+                />
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

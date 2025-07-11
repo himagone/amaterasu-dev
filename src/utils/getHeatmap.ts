@@ -1,4 +1,4 @@
-import { heatmapResponse, heatmapRequestParam, queryFilter, bbox, heatmapPoints } from '../types/heatmap';
+import { heatmapResponse, heatmapRequestParam, queryFilter, bbox, heatmapPoints, heatmapTimeseriesResponse, heatmapTimeseriesRequestParam } from '../types/heatmap';
 
 // 日時を YYYY-MM-DDTHH:mm:ss 形式にフォーマット
 const formatDateTime = (date: Date): string => {
@@ -26,8 +26,8 @@ export const convertBoundsToBox = (bounds: {north: number, south: number, east: 
 export const buildHeatmapRequest = (
   startDate: Date, 
   endDate: Date, 
-  bounds?: {north: number, south: number, east: number, west: number}, 
-  zoom: number = 11
+  zoom: number,
+  bounds?: {north: number, south: number, east: number, west: number}
 ): heatmapRequestParam => {
   const requestParam: heatmapRequestParam = {
     startTime: formatDateTime(startDate),
@@ -70,14 +70,103 @@ const fetchHeatmap = async (url: string, requestParam: heatmapRequestParam, sign
 export const getHeatmapData = async (
   startDate: Date,
   endDate: Date,
+  zoom: number,
   bounds?: {north: number, south: number, east: number, west: number},
-  zoom: number = 11,
   signal?: AbortSignal
 ): Promise<heatmapPoints[]> => {
-  const requestParam = buildHeatmapRequest(startDate, endDate, bounds, zoom);
+  const requestParam = buildHeatmapRequest(startDate, endDate, zoom, bounds);
   const response = await fetchHeatmap('http://localhost:8080/api/v1/heatmap/aggregate', requestParam, signal);
   
   return response.points || [];
+};
+
+// ヒートマップのタイムシリーズデータを取得
+const fetchHeatmapTimeseries = async (url: string, requestParam: heatmapTimeseriesRequestParam, signal?: AbortSignal): Promise<heatmapTimeseriesResponse> => {
+  console.log('Sending heatmap timeseries request:', requestParam);
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestParam),
+    signal: signal
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+
+  const data: heatmapTimeseriesResponse = await response.json();
+  console.log('Received heatmap timeseries data:', data);
+  return data;
+};
+
+// タイムシリーズヒートマップデータを取得
+export const getHeatmapTimeseriesData = async (
+  startDate: Date,
+  endDate: Date,
+  zoom: number,
+  intervalMinutes: number = 1, // デフォルト1分区切り
+  bounds?: {north: number, south: number, east: number, west: number},
+  signal?: AbortSignal
+): Promise<{timestamp: string, points: heatmapPoints[]}[]> => {
+  const requestParam: heatmapTimeseriesRequestParam = {
+    startTime: formatDateTime(startDate),
+    endTime: formatDateTime(endDate),
+    bbox: bounds ? convertBoundsToBox(bounds) : {
+      minLat: 34.22696,
+      maxLat: 34.42696,
+      minLng: 133.97372,
+      maxLng: 134.17372
+    },
+    zoom: zoom,
+    intervalMinutes: intervalMinutes
+  };
+  
+  console.log('🚀 タイムシリーズAPI呼び出し開始:', {
+    リクエストパラメータ: requestParam,
+    エンドポイント: 'http://localhost:8080/api/v1/heatmap/timeseries'
+  });
+  
+  const response = await fetchHeatmapTimeseries('http://localhost:8080/api/v1/heatmap/timeseries', requestParam, signal);
+  
+  console.log('📥 タイムシリーズAPIレスポンス:', {
+    データ件数: response.data?.length || 0,
+    timeSlices件数: response.timeSlices?.length || 0,
+    レスポンス: response
+  });
+  
+  // APIレスポンスの構造に合わせて変換
+  let result: {timestamp: string, points: heatmapPoints[]}[] = [];
+  
+  if (response.timeSlices && Array.isArray(response.timeSlices)) {
+    // timeSlicesを期待される形式に変換
+    result = response.timeSlices.map((timeSlice: any) => ({
+      timestamp: timeSlice.timestamp || timeSlice.time || '',
+      points: timeSlice.points || []
+    }));
+    
+    console.log('🔄 timeSlicesを変換しました:', {
+      変換前: response.timeSlices.length,
+      変換後: result.length,
+      最初のタイムスライス: response.timeSlices[0],
+      最初の変換結果: result[0]
+    });
+  } else if (response.data && Array.isArray(response.data)) {
+    // 既存のdata形式の場合はそのまま使用
+    result = response.data;
+    console.log('📄 既存のdata形式を使用');
+  } else {
+    console.warn('⚠️ 予期しないレスポンス構造:', response);
+  }
+  
+  console.log('✨ 最終的に返されるタイムシリーズデータ:', {
+    件数: result.length,
+    データ: result
+  });
+  
+  return result;
 };
 
 export default getHeatmapData;

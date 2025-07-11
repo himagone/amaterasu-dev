@@ -1,0 +1,229 @@
+.marketing-insights {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 380px;
+  background: rgba(17, 24, 39, 0.95);
+  backdrop-filter: blur(12px);
+  border-radius: 16px;
+  border: 2px solid rgba(248, 148, 6, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  color: white;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  z-index: 1100;
+  overflow: hidden;
+}
+
+.insights-header {
+  padding: 16px 20px;
+  background: linear-gradient(135deg, rgba(248, 148, 6, 0.8), rgba(248, 148, 6, 0.6));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.insights-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: white;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(107, 114, 128, 1);
+  transition: all 0.3s ease;
+}
+
+.status-dot.active {
+  background: rgba(34, 197, 94, 1);
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.6);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.2);
+  }
+}
+
+.insights-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 16px;
+}
+
+.insight-card {
+  background: rgba(31, 41, 55, 0.8);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 16px;
+  transition: all 0.3s ease;
+}
+
+.insight-card:hover {
+  border-color: rgba(248, 148, 6, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.card-header .icon {
+  font-size: 16px;
+}
+
+.card-header h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.card-content {
+  font-size: 13px;
+}
+
+.primary-metric {
+  font-size: 24px;
+  font-weight: 700;
+  color: rgba(248, 148, 6, 1);
+  margin-bottom: 4px;
+}
+
+.secondary-metric {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.time-period {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+}
+
+.time-range {
+  font-weight: 600;
+  color: white;
+}
+
+.level {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.level-最高 {
+  background: rgba(239, 68, 68, 0.8);
+  color: white;
+}
+
+.level-高 {
+  background: rgba(245, 158, 11, 0.8);
+  color: white;
+}
+
+.level-中 {
+  background: rgba(34, 197, 94, 0.8);
+  color: white;
+}
+
+.recommendation {
+  margin-bottom: 8px;
+  padding: 8px;
+  background: rgba(59, 130, 246, 0.1);
+  border-left: 3px solid rgba(59, 130, 246, 0.8);
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* 特定のカードのスタイル */
+.insight-card.peak-info {
+  border-color: rgba(248, 148, 6, 0.3);
+}
+
+.insight-card.average-flow {
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+.insight-card.busy-periods {
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.insight-card.recommendations {
+  grid-column: 1 / -1; /* 全幅 */
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 1200px) {
+  .marketing-insights {
+    position: relative;
+    width: 100%;
+    margin: 20px 0;
+    right: auto;
+    top: auto;
+  }
+  
+  .insights-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .insight-card.recommendations {
+    grid-column: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .marketing-insights {
+    margin: 10px;
+    width: calc(100% - 20px);
+  }
+  
+  .insights-header {
+    padding: 12px 16px;
+  }
+  
+  .insights-header h2 {
+    font-size: 16px;
+  }
+  
+  .insights-grid {
+    padding: 12px;
+    gap: 8px;
+  }
+  
+  .insight-card {
+    padding: 12px;
+  }
+} 

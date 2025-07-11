@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import Header from './components/Header.tsx'
 import Map from './components/Map.tsx'
 import './App.css'
@@ -13,7 +13,9 @@ import { easeCubic } from 'd3-ease';
 import TimeRangeSlider from './components/TimeRangeSlider'
 import LayerControls from './components/LayerControls'
 import LoadingComponent from './components/LoadingComponent'
+import MarketingInsights from './components/MarketingInsights'
 import getHeatmapData from './utils/getHeatmap'
+import { getHeatmapTimeseriesData } from './utils/getHeatmap'
 import { heatmapPoints } from './types/heatmap'
 import { createHeatmapLayer, COLOR_SCHEMES } from './utils/createHeatmapLayer'
 import getDemographicData from './utils/getDemographicData'
@@ -57,7 +59,13 @@ const getZoomLevelFile = (zoom: number): string => {
 function App() {
   // UXフローの状態管理
   const [currentPhase, setCurrentPhase] = useState<UXPhase>(UXPhase.ANALYSIS);
-  const [dateRange, setDateRange] = useState<{start: Date, end: Date} | null>(null);
+  // デフォルトの時間範囲を設定（過去24時間のデータ）
+  const defaultEndDate = new Date('2025-02-23T18:00:00');
+  const defaultStartDate = new Date('2025-02-23T14:00:00');
+  const [dateRange, setDateRange] = useState<{start: Date, end: Date}>({
+    start: defaultStartDate,
+    end: defaultEndDate
+  });
   const [loadingProgress, setLoadingProgress] = useState<number>(0);
   const [loadingStep, setLoadingStep] = useState<string>('');
   const [abortController, setAbortController] = useState<AbortController | null>(null);
@@ -77,6 +85,12 @@ function App() {
   const [mapInstance, setMapInstance] = useState<any>(null);
   const mapInstanceRef = useRef<any>(null);
 
+  // 新しい状態変数を追加
+  const [timeseriesData, setTimeseriesData] = useState<{timestamp: string, points: heatmapPoints[]}[]>([]);
+  const [currentFrameIndex, setCurrentFrameIndex] = useState<number>(0);
+  const [isTimeseriesMode, setIsTimeseriesMode] = useState<boolean>(false);
+  const [isPlaybackActive, setIsPlaybackActive] = useState<boolean>(false);
+
   // 地図インスタンスの安全な設定
   const handleSetMapInstance = (instance: any) => {
     try {
@@ -86,7 +100,20 @@ function App() {
       console.warn('Map instance setting error:', error);
     }
   };
-  const [isControlsCollapsed, setIsControlsCollapsed] = useState<boolean>(false);
+  const [isControlsCollapsed, setIsControlsCollapsed] = useState<boolean>(true); // デフォルトで折りたたむ
+
+  // 初期化時に自動でタイムシリーズデータを取得
+  useEffect(() => {
+    const initializeTimeseriesData = async () => {
+      console.log('🚀 アプリケーション初期化: タイムシリーズデータを自動取得開始');
+      // 少し遅延を入れて地図の初期化を待つ
+      setTimeout(() => {
+        handleApplyDateRange();
+      }, 1000);
+    };
+
+    initializeTimeseriesData();
+  }, []); // 初回のみ実行
 
 
   const [isHeatmapLoading, setIsHeatmapLoading] = useState<boolean>(false);
@@ -114,6 +141,52 @@ function App() {
     }
   };
 
+  // ズームレベルが変更された際にヒートマップデータを自動更新
+  useEffect(() => {
+    // ヒートマップが表示されていて、日付範囲が設定されている場合のみ自動更新
+    if (showHeatmapLayer && dateRange && !isHeatmapLoading) {
+      const updateHeatmapData = async () => {
+        try {
+          setIsHeatmapLoading(true);
+          
+          // 地図の表示範囲を取得
+          let bounds = null;
+          const currentMapInstance = mapInstanceRef.current || mapInstance;
+          if (currentMapInstance && currentMapInstance.getBounds) {
+            try {
+              const mapBounds = currentMapInstance.getBounds();
+              bounds = {
+                north: mapBounds.getNorth(),
+                south: mapBounds.getSouth(),
+                east: mapBounds.getEast(),
+                west: mapBounds.getWest()
+              };
+            } catch (error) {
+              console.warn('Failed to get map bounds:', error);
+            }
+          }
+
+          const data = await getHeatmapData(
+            dateRange.start,
+            dateRange.end,
+            currentZoom,
+            bounds || undefined
+          );
+
+          setHeatmapData(data);
+          console.log('Heatmap data updated for zoom level:', currentZoom);
+        } catch (error) {
+          console.error('Failed to update heatmap data:', error);
+          setHeatmapError(error instanceof Error ? error.message : 'ヒートマップの更新に失敗しました');
+        } finally {
+          setIsHeatmapLoading(false);
+        }
+      };
+
+      updateHeatmapData();
+    }
+  }, [currentZoom, showHeatmapLayer, dateRange]); // currentZoomの変更を監視
+
       const handleHeatmapDataUpdate = (data: heatmapPoints[]) => {
       setHeatmapData(data);
       
@@ -132,6 +205,25 @@ function App() {
 
   const handleHeatmapErrorStateChange = (error: string | null) => {
     setHeatmapError(error);
+  };
+
+  // タイムシリーズデータの更新処理
+  const handleTimeseriesDataUpdate = (data: {timestamp: string, points: heatmapPoints[]}[]) => {
+    setTimeseriesData(data);
+    setIsTimeseriesMode(data.length > 0);
+    setCurrentFrameIndex(0);
+  };
+
+  // 再生状態の変更処理
+  const handlePlayStateChange = (isPlaying: boolean, frameIndex: number) => {
+    setIsPlaybackActive(isPlaying);
+    setCurrentFrameIndex(frameIndex);
+    
+    // 現在のフレームのデータでヒートマップを更新
+    if (timeseriesData.length > 0 && frameIndex < timeseriesData.length) {
+      const currentFrameData = timeseriesData[frameIndex];
+      setHeatmapData(currentFrameData.points);
+    }
   };
 
   // 人口統計フィルター処理関数
@@ -185,8 +277,8 @@ function App() {
       const data = await getDemographicData(
         demographicFilters,
         dateRange,
-        bounds || undefined,
-        currentZoom
+        currentZoom,
+        bounds || undefined
       );
 
       setDemographicPointData(data);
@@ -408,8 +500,8 @@ function App() {
     });
   };
 
+  // 適用ボタンが押された時の処理（タイムシリーズデータを取得）
   const handleApplyDateRange = async () => {
-    if (!dateRange) return;
     
     // 地図の表示範囲を取得
     let bounds = null;
@@ -446,19 +538,39 @@ function App() {
         controller.signal
       );
 
-      const heatmapPromise = getHeatmapData(
+      // タイムシリーズデータを取得（1分間隔）
+      const timeseriesPromise = getHeatmapTimeseriesData(
         dateRange.start,
         dateRange.end,
-        bounds || undefined,
         currentZoom,
+        1, // 1分間隔
+        bounds || undefined,
         controller.signal
       );
 
       // 両方の処理を待つ
-      const [, heatmapData] = await Promise.all([progressPromise, heatmapPromise]);
+      const [, timeseriesData] = await Promise.all([progressPromise, timeseriesPromise]);
       
+      // デバッグ: タイムシリーズデータの内容を確認
+      console.log('🔍 取得したタイムシリーズデータ:', {
+        データ件数: timeseriesData.length,
+        最初のフレーム: timeseriesData[0] || 'なし',
+        全データ: timeseriesData
+      });
       
-      setHeatmapData(heatmapData);
+      // タイムシリーズデータを設定
+      setTimeseriesData(timeseriesData);
+      setIsTimeseriesMode(timeseriesData.length > 0);
+      setCurrentFrameIndex(0);
+      
+      // 最初のフレームのデータでヒートマップを初期化
+      if (timeseriesData.length > 0) {
+        setHeatmapData(timeseriesData[0].points);
+        console.log('✅ 再生ボタンが有効になるはずです');
+      } else {
+        console.log('❌ タイムシリーズデータが空のため、再生ボタンは無効のままです');
+      }
+      
       setShowHeatmapLayer(true);
       setCurrentPhase(UXPhase.ANALYSIS);
     } catch (error) {
@@ -466,7 +578,7 @@ function App() {
         console.log('Request was cancelled');
         setCurrentPhase(UXPhase.ANALYSIS);
       } else {
-        console.error('Error fetching heatmap data:', error);
+        console.error('Error fetching timeseries data:', error);
         setHeatmapError(error instanceof Error ? error.message : 'Unknown error');
         setCurrentPhase(UXPhase.ANALYSIS);
       }
@@ -504,6 +616,13 @@ function App() {
           />
           <Weather currentDate={currentDate} />
           
+          {/* マーケティングインサイト */}
+          <MarketingInsights
+            timeseriesData={timeseriesData}
+            currentFrameIndex={currentFrameIndex}
+            isPlaying={isPlaybackActive}
+          />
+          
           <LayerControls
             isControlsCollapsed={isControlsCollapsed}
             setIsControlsCollapsed={setIsControlsCollapsed}
@@ -527,6 +646,9 @@ function App() {
           <TimeRangeSlider 
             onDateRangeSelect={handleDateRangeSelect}
             onApply={handleApplyDateRange}
+            onTimeseriesDataUpdate={handleTimeseriesDataUpdate}
+            onPlayStateChange={handlePlayStateChange}
+            timeseriesData={timeseriesData}
             isLoading={currentPhase === UXPhase.LOADING}
           />
 

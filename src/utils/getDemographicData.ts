@@ -125,21 +125,21 @@ const buildApiFilters = (filters: DemographicFilters) => {
  * 人口統計フィルターに基づいてポイントデータを取得する
  * @param filters - 人口統計フィルター条件
  * @param dateRange - 日付範囲
+ * @param zoomLevel - ズームレベル
  * @param bounds - 地図の表示範囲（オプション）
- * @param zoomLevel - ズームレベル（使用しない）
  * @param signal - AbortSignal（キャンセル用）
  * @returns Promise<DemographicPoint[]>
  */
 export const getDemographicData = async (
   filters: DemographicFilters,
   dateRange: { start: Date; end: Date },
+  zoomLevel: number,
   bounds?: {
     north: number;
     south: number;
     east: number;
     west: number;
   },
-  zoomLevel: number = 10,
   signal?: AbortSignal
 ): Promise<DemographicPoint[]> => {
   try {
@@ -152,7 +152,7 @@ export const getDemographicData = async (
     });
 
     // ヒートマップと同じ時間処理を使用
-    const heatmapRequest = buildHeatmapRequest(dateRange.start, dateRange.end, bounds, zoomLevel);
+    const heatmapRequest = buildHeatmapRequest(dateRange.start, dateRange.end, zoomLevel, bounds);
 
     // リクエストボディの構築
     const requestBody: DemographicRequest = {

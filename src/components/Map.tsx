@@ -66,6 +66,17 @@ function Map(props: Props) {
           }
         }
       });
+
+      // ズームレベルが変更された際のイベントリスナーを追加
+      map.current.on('zoomend', () => {
+        if (props.onZoomChange && map.current) {
+          const currentZoom = map.current.getZoom();
+          if (currentZoom !== undefined) {
+            console.log('Zoom changed to:', currentZoom);
+            props.onZoomChange(currentZoom);
+          }
+        }
+      });
     }
   }, []);
 
