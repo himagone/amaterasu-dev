@@ -7,6 +7,7 @@
   backdrop-filter: blur(10px);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   padding: 8px 16px;
+  padding-top: 60px;
   z-index: 1000;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   color: white;
@@ -15,16 +16,18 @@
 /* 選択範囲インジケーター */
 .selection-indicator {
   position: absolute;
-  top: -40px;
+  top: -90px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(248, 148, 6, 0.9);
+  background: rgba(248, 148, 6, 0.95);
   color: white;
-  padding: 6px 12px;
-  border-radius: 4px;
-  font-size: 13px;
-  font-weight: 600;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(248, 148, 6, 0.6);
+  backdrop-filter: blur(8px);
 }
 
 .selection-indicator::after {
@@ -40,6 +43,8 @@
 .selection-text {
   white-space: nowrap;
 }
+
+
 
 /* フレーム情報 */
 .frame-info {
@@ -104,7 +109,7 @@
 /* 再生コントロール */
 .playback-controls {
   position: absolute;
-  top: -100px; /* 高さを拡張 */
+  top: -140px; /* 高さを拡張 */
   left: 16px;
   display: flex;
   gap: 20px; /* ギャップを拡張 */
@@ -294,7 +299,7 @@
 .timeline {
   flex: 1;
   position: relative;
-  height: 60px;
+  height: 36px;
   margin: 0 8px;
 }
 
@@ -314,11 +319,17 @@
 .selection-range {
   position: absolute;
   top: 50%;
-  height: 6px;
-  background: linear-gradient(90deg, #ff8c00, #ffa500);
-  border-radius: 3px;
+  height: 8px;
+  background: linear-gradient(90deg, 
+    rgba(248, 148, 6, 0.9) 0%, 
+    rgba(34, 197, 94, 0.7) 50%,
+    rgba(248, 148, 6, 0.9) 100%);
+  border: 1px solid rgba(248, 148, 6, 0.8);
+  border-radius: 4px;
   transform: translateY(-50%);
-  box-shadow: 0 0 8px rgba(255, 140, 0, 0.6);
+  box-shadow: 
+    0 0 12px rgba(248, 148, 6, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
   z-index: 2;
 }
 
@@ -336,6 +347,7 @@
   cursor: pointer;
   transform: translateY(-50%);
   z-index: 3;
+  pointer-events: auto;
 }
 
 .range-slider:disabled {
@@ -363,12 +375,32 @@
 }
 
 .range-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
+  transform: scale(1.15);
   box-shadow: 0 0 12px rgba(255, 140, 0, 0.8);
 }
 
 .range-slider::-webkit-slider-thumb:active {
-  transform: scale(1.3);
+  transform: scale(1.2);
+}
+
+/* スタートスライダーのホバー効果 */
+.start-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 0 15px rgba(32, 178, 170, 0.8);
+}
+
+.start-slider::-webkit-slider-thumb:active {
+  transform: scale(1.2);
+}
+
+/* エンドスライダーのホバー効果 */
+.end-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 0 15px rgba(255, 140, 0, 0.8);
+}
+
+.end-slider::-webkit-slider-thumb:active {
+  transform: scale(1.2);
 }
 
 /* Firefox */
@@ -390,20 +422,102 @@
 }
 
 /* 開始と終了スライダーの区別 */
+.start-slider {
+  z-index: 4;
+  top: 40%; /* スタートスライダーを上にずらす */
+  transform: translateY(-50%);
+}
+
 .start-slider::-webkit-slider-thumb {
   background: #20b2aa;
+  height: 18px;
+  width: 18px;
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(32, 178, 170, 0.4);
 }
 
 .start-slider::-moz-range-thumb {
   background: #20b2aa;
+  height: 18px;
+  width: 18px;
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(32, 178, 170, 0.4);
+}
+
+.end-slider {
+  z-index: 5;
+  top: 60%; /* エンドスライダーを下にずらす */
+  transform: translateY(-50%);
 }
 
 .end-slider::-webkit-slider-thumb {
   background: #ff8c00;
+  height: 18px;
+  width: 18px;
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(255, 140, 0, 0.4);
 }
 
 .end-slider::-moz-range-thumb {
   background: #ff8c00;
+  height: 18px;
+  width: 18px;
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(255, 140, 0, 0.4);
+}
+
+/* 現在再生中の位置インジケーター */
+.playback-position-indicator {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  transform: translateX(-50%);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.playback-needle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 3px;
+  background: linear-gradient(to bottom, #f89406 0%, #ff6b35 100%);
+  transform: translateX(-50%);
+  box-shadow: 0 0 8px rgba(248, 148, 6, 0.6);
+  border-radius: 1px;
+}
+
+.playback-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, #f89406 0%, #ff8c00 100%);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(4px);
+}
+
+.playback-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #f89406;
+}
+
+.current-time {
+  line-height: 1;
 }
 
 /* 時間目盛り */
@@ -430,12 +544,32 @@
 /* 日付ラベル */
 .date-label {
   position: absolute;
-  top: -25px;
-  left: 4px;
-  font-size: 11px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.8);
+  top: -55px;
+  left: 2px;
+  right: 2px;
+  text-align: center;
   white-space: nowrap;
+  background: rgba(44, 44, 44, 0.95);
+  border-radius: 8px;
+  padding: 8px 4px;
+  border: 1px solid rgba(248, 148, 6, 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(5px);
+}
+
+.month-day {
+  font-size: 14px;
+  font-weight: 700;
+  color: rgba(248, 148, 6, 1);
+  line-height: 1.2;
+  margin-bottom: 2px;
+}
+
+.weekday {
+  font-size: 10px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1;
 }
 
 /* 時間目盛り */
@@ -448,31 +582,39 @@
 .hour-marker {
   flex: 1;
   position: relative;
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .hour-marker.major {
-  border-right-color: rgba(255, 255, 255, 0.2);
+  border-right: 2px solid rgba(248, 148, 6, 0.4);
+  background: linear-gradient(to right, transparent 0%, rgba(248, 148, 6, 0.05) 50%, transparent 100%);
 }
 
 .hour-marker.major::after {
   content: '';
   position: absolute;
-  right: -1px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 2px;
-  height: 8px;
-  background: rgba(255, 255, 255, 0.3);
+  right: -2px;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(to bottom, 
+    rgba(248, 148, 6, 0.6) 0%, 
+    rgba(248, 148, 6, 0.3) 50%, 
+    rgba(248, 148, 6, 0.6) 100%);
+  box-shadow: 0 0 4px rgba(248, 148, 6, 0.4);
 }
 
 .hour-marker span {
   position: absolute;
-  bottom: -18px;
-  right: -8px;
+  bottom: -20px;
+  right: -12px;
   font-size: 10px;
-  color: rgba(255, 255, 255, 0.6);
-  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 600;
+  background: rgba(44, 44, 44, 0.8);
+  padding: 2px 4px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* 適用ボタン */
@@ -507,21 +649,11 @@
   transform: none;
 }
 
-/* 適用ボタンにパルス効果を追加（timeseriesDataが空の場合） */
-.apply-btn.highlight {
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0% { box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3); }
-  50% { box-shadow: 0 4px 16px rgba(102, 126, 234, 0.6); }
-  100% { box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3); }
-}
-
 /* レスポンシブ対応 */
 @media (max-width: 768px) {
   .windy-time-slider {
     padding: 6px 12px;
+    padding-top: 50px;
   }
 
   .timeline-container {
@@ -540,8 +672,16 @@
   }
 
   .date-label {
-    font-size: 10px;
-    top: -20px;
+    top: -45px;
+    padding: 6px 3px;
+  }
+  
+  .month-day {
+    font-size: 12px;
+  }
+  
+  .weekday {
+    font-size: 9px;
   }
 
   .hour-marker span {
@@ -556,9 +696,9 @@
   }
 
   .selection-indicator {
-    top: -35px;
-    font-size: 12px;
-    padding: 4px 8px;
+    top: -75px;
+    font-size: 11px;
+    padding: 6px 10px;
   }
 }
 

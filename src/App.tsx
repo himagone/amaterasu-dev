@@ -102,19 +102,6 @@ function App() {
   };
   const [isControlsCollapsed, setIsControlsCollapsed] = useState<boolean>(true); // デフォルトで折りたたむ
 
-  // 初期化時に自動でタイムシリーズデータを取得
-  useEffect(() => {
-    const initializeTimeseriesData = async () => {
-      console.log('🚀 アプリケーション初期化: タイムシリーズデータを自動取得開始');
-      // 少し遅延を入れて地図の初期化を待つ
-      setTimeout(() => {
-        handleApplyDateRange();
-      }, 1000);
-    };
-
-    initializeTimeseriesData();
-  }, []); // 初回のみ実行
-
 
   const [isHeatmapLoading, setIsHeatmapLoading] = useState<boolean>(false);
   const [heatmapError, setHeatmapError] = useState<string | null>(null);
@@ -141,28 +128,27 @@ function App() {
     }
   };
 
-  // ズームレベルが変更された際にヒートマップデータを自動更新
+  // ズームレベルが変更された際にヒートマップデータを自動更新（タイムスライダー変更時は除く）
   useEffect(() => {
     // ヒートマップが表示されていて、日付範囲が設定されている場合のみ自動更新
     if (showHeatmapLayer && dateRange && !isHeatmapLoading) {
       const updateHeatmapData = async () => {
-        try {
+        try{
           setIsHeatmapLoading(true);
-          
-          // 地図の表示範囲を取得
+
           let bounds = null;
           const currentMapInstance = mapInstanceRef.current || mapInstance;
-          if (currentMapInstance && currentMapInstance.getBounds) {
+          if(currentMapInstance && currentMapInstance.getBounds){
             try {
               const mapBounds = currentMapInstance.getBounds();
               bounds = {
                 north: mapBounds.getNorth(),
                 south: mapBounds.getSouth(),
-                east: mapBounds.getEast(),
-                west: mapBounds.getWest()
+                east : mapBounds.getEast(),
+                west : mapBounds.getWest(),
               };
             } catch (error) {
-              console.warn('Failed to get map bounds:', error);
+              console.warn('Failed to get map bounds: ', error);
             }
           }
 
@@ -174,18 +160,14 @@ function App() {
           );
 
           setHeatmapData(data);
-          console.log('Heatmap data updated for zoom level:', currentZoom);
-        } catch (error) {
+        }catch(error){
           console.error('Failed to update heatmap data:', error);
-          setHeatmapError(error instanceof Error ? error.message : 'ヒートマップの更新に失敗しました');
-        } finally {
-          setIsHeatmapLoading(false);
         }
-      };
+      }
 
       updateHeatmapData();
     }
-  }, [currentZoom, showHeatmapLayer, dateRange]); // currentZoomの変更を監視
+  }, [currentZoom, showHeatmapLayer]); // dateRangeの監視を削除
 
       const handleHeatmapDataUpdate = (data: heatmapPoints[]) => {
       setHeatmapData(data);
@@ -470,8 +452,7 @@ function App() {
         { progress: 40, step: 'クエリを実行中...', delay: 1200 },
         { progress: 60, step: 'データを集計中...', delay: 1500 },
         { progress: 80, step: 'ヒートマップを生成中...', delay: 1000 },
-        { progress: 95, step: '最終処理中...', delay: 500 },
-        { progress: 100, step: '完了', delay: 200 }
+        { progress: 100, step: '最終処理中...', delay: 200 },
       ];
 
       let currentStepIndex = 0;
@@ -616,13 +597,6 @@ function App() {
           />
           <Weather currentDate={currentDate} />
           
-          {/* マーケティングインサイト */}
-          <MarketingInsights
-            timeseriesData={timeseriesData}
-            currentFrameIndex={currentFrameIndex}
-            isPlaying={isPlaybackActive}
-          />
-          
           <LayerControls
             isControlsCollapsed={isControlsCollapsed}
             setIsControlsCollapsed={setIsControlsCollapsed}
@@ -633,7 +607,6 @@ function App() {
             heatmapError={heatmapError}
             setHeatmapError={setHeatmapError}
             isHeatmapLoading={isHeatmapLoading}
-
             dateRange={dateRange}
             onDemographicFiltersChange={handleDemographicFiltersChange}
             onApplyDemographicFilters={handleApplyDemographicFilters}
@@ -641,6 +614,13 @@ function App() {
             demographicError={demographicError}
             setDemographicError={setDemographicError}
            />
+          
+          {/* マーケティングインサイト */}
+          <MarketingInsights
+            timeseriesData={timeseriesData}
+            currentFrameIndex={currentFrameIndex}
+            isPlaying={isPlaybackActive}
+          />
 
           {/* タイムスライダー */}
           <TimeRangeSlider 

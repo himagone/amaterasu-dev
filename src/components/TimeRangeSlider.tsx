@@ -54,8 +54,8 @@ type Props = {
 
 function TimeRangeSlider(props: Props) {
   const [timeSlots] = useState(generateTimeSlots());
-  const [startSlotIndex, setStartSlotIndex] = useState<number>(840); // 最初の日の14:00
-  const [endSlotIndex, setEndSlotIndex] = useState<number>(1080); // 最初の日の18:00
+  const [startSlotIndex, setStartSlotIndex] = useState<number>(900); // 最初の日の15:00 (より操作しやすい範囲)
+  const [endSlotIndex, setEndSlotIndex] = useState<number>(960); // 最初の日の16:00 (1時間の短い範囲)
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [currentFrameIndex, setCurrentFrameIndex] = useState<number>(0);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1000); // 1秒間隔
@@ -154,29 +154,19 @@ function TimeRangeSlider(props: Props) {
     };
   }, []);
 
-  // 再生速度変更
-  const handleSpeedChange = (speed: number) => {
-    setPlaybackSpeed(speed);
-    if (isPlaying) {
-      stopPlayback();
-      setTimeout(() => startPlayback(), 100);
-    }
-  };
 
   // 選択範囲の表示テキスト
   const getSelectionText = () => {
     const startSlot = timeSlots[startSlotIndex];
     const endSlot = timeSlots[endSlotIndex];
+    const startDate = AVAILABLE_DATES[startSlot.dateIndex];
+    const endDate = AVAILABLE_DATES[endSlot.dateIndex];
     
     if (startSlot.dateIndex === endSlot.dateIndex) {
       // 同じ日の場合
-      return `${startSlot.displayLabel} - ${endSlot.displayLabel}`;
+      return `${startDate.getMonth() + 1}/${startDate.getDate()}(${getJapaneseWeekday(startDate)}) ${startSlot.displayLabel} - ${endSlot.displayLabel}`;
     } else {
-      // 異なる日の場合
-      const timeDiff = endSlotIndex - startSlotIndex;
-      const hours = Math.floor(timeDiff / 60);
-      const minutes = timeDiff % 60;
-      return `${startSlot.displayLabel} - ${endSlot.displayLabel} (${hours}時間${minutes}分)`;
+      return `${startDate.getMonth() + 1}/${startDate.getDate()}(${getJapaneseWeekday(startDate)}) ${startSlot.displayLabel} - ${endDate.getMonth() + 1}/${endDate.getDate()}(${getJapaneseWeekday(endDate)}) ${endSlot.displayLabel}`;
     }
   };
 
@@ -209,19 +199,17 @@ function TimeRangeSlider(props: Props) {
     const densityLevel = totalPeople > peakData.count * 0.8 ? '高密度' : 
                         totalPeople > peakData.count * 0.5 ? '中密度' : '低密度';
     
-    const basic = `フレーム ${currentFrameIndex + 1}/${timeseriesData.length} - ${currentTime.toLocaleString('ja-JP')}`;
-    
     const insights = {
       currentTime: currentTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
       timePeriod,
       totalPeople: totalPeople.toLocaleString(),
       densityLevel,
-      peakTime: new Date(peakData.timestamp).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
+      peakTime: new Date(peakData.timestamp).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
       isPeakTime: currentFrameIndex === peakData.index,
       progressPercent: Math.round((currentFrameIndex / (timeseriesData.length - 1)) * 100)
     };
     
-    return { basic, insights };
+    return {insights};
   };
 
   // 初期値設定
@@ -241,63 +229,44 @@ function TimeRangeSlider(props: Props) {
     };
   };
 
+  // 現在再生中の位置を計算
+  const getCurrentPlaybackPosition = () => {
+    if (!isPlaying || timeseriesData.length === 0 || currentFrameIndex >= timeseriesData.length) {
+      return null;
+    }
+
+    const currentFrame = timeseriesData[currentFrameIndex];
+    const currentTimestamp = new Date(currentFrame.timestamp);
+    
+    // 選択範囲内での相対位置を計算（0-100%）
+    const totalFrames = timeseriesData.length;
+    const relativePosition = (currentFrameIndex / (totalFrames - 1)) * 100;
+    
+    // 選択範囲の幅を取得
+    const selectionStyle = getSelectionStyle();
+    const selectionStartPercent = parseFloat(selectionStyle.left.replace('%', ''));
+    const selectionWidthPercent = parseFloat(selectionStyle.width.replace('%', ''));
+    
+    // 選択範囲内での絶対位置を計算
+    const absolutePosition = selectionStartPercent + (relativePosition / 100) * selectionWidthPercent;
+    
+    return {
+      position: absolutePosition,
+      time: currentTimestamp.toLocaleString('ja-JP', { 
+        month: 'numeric', 
+        day: 'numeric',
+        hour: '2-digit', 
+        minute: '2-digit' 
+      }),
+      weekday: getJapaneseWeekday(currentTimestamp)
+    };
+  };
+
   return (
     <div className="windy-time-slider">
       {/* 選択範囲表示 */}
       <div className="selection-indicator">
-        <span className="selection-text">+ {getSelectionText()}</span>
-        {timeseriesData.length > 0 && (() => {
-          const frameInfo = getCurrentFrameInfo();
-          return (
-            <div className="frame-info">
-              <span className="frame-text">{frameInfo.basic}</span>
-              {frameInfo.insights && (
-                <div className="insights-info">
-                  <p>現在の時刻: {frameInfo.insights.currentTime}</p>
-                  <p>時間帯: {frameInfo.insights.timePeriod}</p>
-                  <p>総人数: {frameInfo.insights.totalPeople}</p>
-                  <p>人流密度: {frameInfo.insights.densityLevel}</p>
-                  <p>ピーク時刻: {frameInfo.insights.peakTime}</p>
-                  <p>進捗: {frameInfo.insights.progressPercent}%</p>
-                </div>
-              )}
-            </div>
-          );
-        })()}
-      </div>
-
-      {/* 再生コントロール */}
-      <div className="playback-controls">
-        <div className="speed-controls">
-          <label>再生速度:</label>
-          <select 
-            value={playbackSpeed} 
-            onChange={(e) => handleSpeedChange(parseInt(e.target.value))}
-            disabled={props.isLoading}
-          >
-            <option value={100}>高速 (0.1秒)</option>
-            <option value={500}>普通 (0.5秒)</option>
-            <option value={1000}>通常 (1秒)</option>
-            <option value={2000}>ゆっくり (2秒)</option>
-          </select>
-        </div>
-        
-        {timeseriesData.length > 0 && (
-          <div className="frame-controls">
-            <button 
-              onClick={() => setCurrentFrameIndex(Math.max(0, currentFrameIndex - 1))}
-              disabled={isPlaying || props.isLoading}
-            >
-              ⏮
-            </button>
-            <button 
-              onClick={() => setCurrentFrameIndex(Math.min(timeseriesData.length - 1, currentFrameIndex + 1))}
-              disabled={isPlaying || props.isLoading}
-            >
-              ⏭
-            </button>
-          </div>
-        )}
+        <span className="selection-text">{getSelectionText()}</span>
       </div>
 
       {/* メインタイムライン */}
@@ -332,6 +301,26 @@ function TimeRangeSlider(props: Props) {
             style={getSelectionStyle()}
           ></div>
 
+          {/* 現在再生中の位置インジケーター */}
+          {(() => {
+            const playbackPosition = getCurrentPlaybackPosition();
+            if (!playbackPosition) return null;
+            
+            return (
+              <div 
+                className="playback-position-indicator"
+                style={{ left: `${playbackPosition.position}%` }}
+              >
+                <div className="playback-needle"></div>
+                <div className="playback-tooltip">
+                  <div className="current-time">
+                    {playbackPosition.weekday} {playbackPosition.time}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* レンジスライダー */}
           <input
             type="range"
@@ -358,16 +347,21 @@ function TimeRangeSlider(props: Props) {
               <div key={dateIndex} className="date-group">
                 {/* 日付ラベル */}
                 <div className="date-label">
-                  {getJapaneseWeekday(date)} {date.getDate()}
+                  <div className="month-day">
+                    {date.getMonth() + 1}/{date.getDate()}
+                  </div>
+                  <div className="weekday">
+                    {getJapaneseWeekday(date)}
+                  </div>
                 </div>
                 {/* 時間目盛り */}
                 <div className="hour-markers">
                   {Array.from({ length: 24 }, (_, hour) => (
                     <div 
                       key={hour} 
-                      className={`hour-marker ${hour % 6 === 0 ? 'major' : 'minor'}`}
+                      className={`hour-marker ${hour % 6 === 0 ? 'major' : ''}`}
                     >
-                      {hour % 6 === 0 && <span>{hour}</span>}
+                      {hour % 12 === 0 && <span>{hour}:00</span>}
                     </div>
                   ))}
                 </div>

@@ -29,29 +29,6 @@ const HeatmapControl: React.FC<HeatmapControlProps> = ({
 
   return (
     <>
-      {/* 選択された時間範囲の表示 */}
-      {dateRange && (
-        <div className="selected-date-range">
-          <div className="selected-date-range-title">
-            📅 表示中の時間
-          </div>
-          <div className="selected-date-range-content">
-            {dateRange.start.toLocaleDateString('ja-JP', {
-              year: 'numeric',
-              month: 'numeric',
-              day: 'numeric'
-            })} {dateRange.start.toLocaleTimeString('ja-JP', {
-              hour: '2-digit',
-              minute: '2-digit'
-            })}
-            <span className="selected-date-range-separator">〜</span>
-            {dateRange.end.toLocaleTimeString('ja-JP', {
-              hour: '2-digit',
-              minute: '2-digit'
-            })}
-          </div>
-        </div>
-      )}
       {/* ヒートマップ制御パネル */}
       <div className="layer-control">
         <label className="toggle-switch">
@@ -69,7 +46,7 @@ const HeatmapControl: React.FC<HeatmapControlProps> = ({
               }
             }}
           />
-          <span className="slider">密度ヒートマップ</span>
+          <span className="slider">期間全体のヒートマップを表示</span>
         </label>
         
         {/* ヒートマップ情報 */}

@@ -97,7 +97,9 @@ const MarketingInsights: React.FC<MarketingInsightsProps> = ({
     }
 
     return {
-      peakTime: new Date(peakData.time).toLocaleTimeString('ja-JP', { 
+      peakTime: new Date(peakData.time).toLocaleString('ja-JP', { 
+        month: 'numeric',
+        day: 'numeric',
         hour: '2-digit', 
         minute: '2-digit' 
       }),
@@ -115,9 +117,13 @@ const MarketingInsights: React.FC<MarketingInsightsProps> = ({
     <div className="marketing-insights">
       <div className="insights-header">
         <h2>📊 マーケティングインサイト</h2>
-        <div className="status-indicator">
-          <span className={`status-dot ${isPlaying ? 'active' : 'paused'}`}></span>
-          {isPlaying ? 'データ分析中' : '分析待機中'}
+        <div className="header-actions">
+          {isPlaying && (
+            <div className="status-indicator">
+              <span className="status-dot active"></span>
+              データ分析中
+            </div>
+          )}
         </div>
       </div>
 
@@ -131,17 +137,6 @@ const MarketingInsights: React.FC<MarketingInsightsProps> = ({
           <div className="card-content">
             <div className="primary-metric">{insights.peakTime}</div>
             <div className="secondary-metric">{insights.peakCount.toLocaleString()}人</div>
-          </div>
-        </div>
-
-        {/* 平均人流 */}
-        <div className="insight-card average-flow">
-          <div className="card-header">
-            <span className="icon">📈</span>
-            <h3>平均人流</h3>
-          </div>
-          <div className="card-content">
-            <div className="primary-metric">{insights.averageFlow.toLocaleString()}人/分</div>
           </div>
         </div>
 

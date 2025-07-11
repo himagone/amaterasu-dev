@@ -1,6 +1,6 @@
 .marketing-insights {
   position: fixed;
-  top: 20px;
+  top: 120px;
   right: 20px;
   width: 380px;
   background: rgba(17, 24, 39, 0.95);
@@ -10,7 +10,7 @@
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   color: white;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-  z-index: 1100;
+  z-index: 999;
   overflow: hidden;
 }
 
@@ -28,6 +28,60 @@
   font-size: 18px;
   font-weight: 700;
   color: white;
+  flex: 1;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.filter-toggle-btn {
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.filter-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+.filter-toggle-btn:active {
+  transform: translateY(0);
+}
+
+.demographic-filter-container {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(31, 41, 55, 0.6);
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+/* MarketingInsights内のDemographicFilterの調整 */
+.demographic-filter-container .demographic-filter {
+  margin-bottom: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+
+.demographic-filter-container .demographic-filter .filter-header {
+  padding: 12px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.demographic-filter-container .demographic-filter .filter-section {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .status-indicator {
@@ -188,11 +242,8 @@
 /* レスポンシブ対応 */
 @media (max-width: 1200px) {
   .marketing-insights {
-    position: relative;
-    width: 100%;
-    margin: 20px 0;
-    right: auto;
-    top: auto;
+    width: 320px;
+    top: 140px;
   }
   
   .insights-grid {
@@ -206,16 +257,31 @@
 
 @media (max-width: 768px) {
   .marketing-insights {
-    margin: 10px;
-    width: calc(100% - 20px);
+    width: calc(100vw - 40px);
+    left: 20px;
+    right: 20px;
+    top: 180px;
   }
   
   .insights-header {
     padding: 12px 16px;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
   }
   
   .insights-header h2 {
     font-size: 16px;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .filter-toggle-btn {
+    font-size: 11px;
+    padding: 5px 10px;
   }
   
   .insights-grid {
@@ -225,5 +291,9 @@
   
   .insight-card {
     padding: 12px;
+  }
+
+  .demographic-filter-container {
+    max-height: 300px;
   }
 } 
