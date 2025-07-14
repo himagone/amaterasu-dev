@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { Slider } from '@mui/material'
 import './TimeRangeSlider.css'
 
 // 固定の8日間データ
@@ -54,8 +55,7 @@ type Props = {
 
 function TimeRangeSlider(props: Props) {
   const [timeSlots] = useState(generateTimeSlots());
-  const [startSlotIndex, setStartSlotIndex] = useState<number>(900); // 最初の日の15:00 (より操作しやすい範囲)
-  const [endSlotIndex, setEndSlotIndex] = useState<number>(960); // 最初の日の16:00 (1時間の短い範囲)
+  const [sliderValue, setSliderValue] = useState<number[]>([900, 960]); // 最初の日の15:00-16:00
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [currentFrameIndex, setCurrentFrameIndex] = useState<number>(0);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1000); // 1秒間隔
@@ -75,6 +75,15 @@ function TimeRangeSlider(props: Props) {
     });
   }, [timeseriesData, props.isLoading]);
 
+  // スロットインデックスを時間形式に変換する関数
+  const formatTimeLabel = (value: number) => {
+    const slot = timeSlots[value];
+    if (!slot) return '';
+    const date = AVAILABLE_DATES[slot.dateIndex];
+    const weekday = getJapaneseWeekday(date);
+    return `${date.getMonth() + 1}/${date.getDate()}(${weekday}) ${slot.displayLabel}`;
+  };
+
   // 日本語の曜日を取得
   const getJapaneseWeekday = (date: Date): string => {
     const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
@@ -82,15 +91,10 @@ function TimeRangeSlider(props: Props) {
   };
 
   // 時間範囲の変更処理
-  const handleRangeChange = (type: 'start' | 'end', value: number) => {
-    if (type === 'start') {
-      const newStartIndex = Math.min(value, endSlotIndex - 1);
-      setStartSlotIndex(newStartIndex);
-      updateDateRange(newStartIndex, endSlotIndex);
-    } else {
-      const newEndIndex = Math.max(value, startSlotIndex + 1);
-      setEndSlotIndex(newEndIndex);
-      updateDateRange(startSlotIndex, newEndIndex);
+  const handleSliderChange = (event: Event, newValue: number | number[]) => {
+    if (Array.isArray(newValue)) {
+      setSliderValue(newValue);
+      updateDateRange(newValue[0], newValue[1]);
     }
   };
 
@@ -157,8 +161,8 @@ function TimeRangeSlider(props: Props) {
 
   // 選択範囲の表示テキスト
   const getSelectionText = () => {
-    const startSlot = timeSlots[startSlotIndex];
-    const endSlot = timeSlots[endSlotIndex];
+    const startSlot = timeSlots[sliderValue[0]];
+    const endSlot = timeSlots[sliderValue[1]];
     const startDate = AVAILABLE_DATES[startSlot.dateIndex];
     const endDate = AVAILABLE_DATES[endSlot.dateIndex];
     
@@ -170,58 +174,17 @@ function TimeRangeSlider(props: Props) {
     }
   };
 
-  // 現在の再生フレーム情報の表示（拡張版）
-  const getCurrentFrameInfo = () => {
-    if (timeseriesData.length === 0) return { basic: '', insights: null };
-    
-    const currentData = timeseriesData[currentFrameIndex];
-    const currentTime = new Date(currentData.timestamp);
-    const totalPeople = currentData.points.reduce((sum, point) => sum + (point.value || point.intensity || 1), 0);
-    
-    // ピーク時間帯の分析
-    const peakData = timeseriesData.reduce((peak, frame, index) => {
-      const framePeople = frame.points.reduce((sum, point) => sum + (point.value || point.intensity || 1), 0);
-      return framePeople > peak.count ? { count: framePeople, index, timestamp: frame.timestamp } : peak;
-    }, { count: 0, index: 0, timestamp: '' });
-    
-    // 時間帯の分類
-    const hour = currentTime.getHours();
-    let timePeriod = '';
-    if (hour >= 6 && hour < 10) timePeriod = '朝の通勤時間帯';
-    else if (hour >= 10 && hour < 12) timePeriod = '午前中';
-    else if (hour >= 12 && hour < 14) timePeriod = 'ランチタイム';
-    else if (hour >= 14 && hour < 18) timePeriod = '午後の時間帯';
-    else if (hour >= 18 && hour < 21) timePeriod = '夕方の時間帯';
-    else if (hour >= 21 && hour < 24) timePeriod = '夜の時間帯';
-    else timePeriod = '深夜・早朝';
-    
-    // 人流密度の評価
-    const densityLevel = totalPeople > peakData.count * 0.8 ? '高密度' : 
-                        totalPeople > peakData.count * 0.5 ? '中密度' : '低密度';
-    
-    const insights = {
-      currentTime: currentTime.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
-      timePeriod,
-      totalPeople: totalPeople.toLocaleString(),
-      densityLevel,
-      peakTime: new Date(peakData.timestamp).toLocaleString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }),
-      isPeakTime: currentFrameIndex === peakData.index,
-      progressPercent: Math.round((currentFrameIndex / (timeseriesData.length - 1)) * 100)
-    };
-    
-    return {insights};
-  };
 
   // 初期値設定
   useEffect(() => {
-    updateDateRange(startSlotIndex, endSlotIndex);
+    updateDateRange(sliderValue[0], sliderValue[1]);
   }, []);
 
   // 選択範囲のスタイル計算
   const getSelectionStyle = () => {
     const totalSlots = timeSlots.length;
-    const startPercent = (startSlotIndex / totalSlots) * 100;
-    const endPercent = (endSlotIndex / totalSlots) * 100;
+    const startPercent = (sliderValue[0] / totalSlots) * 100;
+    const endPercent = (sliderValue[1] / totalSlots) * 100;
     
     return {
       left: `${startPercent}%`,
@@ -322,23 +285,23 @@ function TimeRangeSlider(props: Props) {
           })()}
 
           {/* レンジスライダー */}
-          <input
-            type="range"
-            min="0"
+          <Slider
+            getAriaLabel={() => 'Time range'}
+            value={sliderValue}
+            onChange={handleSliderChange}
+            valueLabelDisplay="auto"
+            min={0}
             max={timeSlots.length - 1}
-            value={startSlotIndex}
-            onChange={(e) => handleRangeChange('start', parseInt(e.target.value))}
-            className="range-slider start-slider"
             disabled={props.isLoading}
-          />
-          <input
-            type="range"
-            min="0"
-            max={timeSlots.length - 1}
-            value={endSlotIndex}
-            onChange={(e) => handleRangeChange('end', parseInt(e.target.value))}
-            className="range-slider end-slider"
-            disabled={props.isLoading}
+            className="range-slider"
+            getAriaValueText={(value) => {
+              const slot = timeSlots[value];
+              if (!slot) return '';
+              const date = AVAILABLE_DATES[slot.dateIndex];
+              const weekday = getJapaneseWeekday(date);
+              return `${date.getMonth() + 1}/${date.getDate()}(${weekday}) ${slot.displayLabel}`;
+            }}
+            valueLabelFormat={formatTimeLabel}
           />
 
           {/* 時間目盛り */}

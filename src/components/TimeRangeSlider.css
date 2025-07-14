@@ -333,137 +333,81 @@
   z-index: 2;
 }
 
-/* レンジスライダー */
+/* MUI Slider カスタムスタイル */
 .range-slider {
   position: absolute;
   top: 50%;
   left: 0;
   width: 100%;
-  height: 20px;
-  background: transparent;
-  appearance: none;
-  border-radius: 10px;
-  outline: none;
-  cursor: pointer;
   transform: translateY(-50%);
   z-index: 3;
   pointer-events: auto;
 }
 
-.range-slider:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
+.range-slider .MuiSlider-track {
+  background: linear-gradient(90deg, 
+    rgba(248, 148, 6, 0.9) 0%, 
+    rgba(34, 197, 94, 0.7) 50%,
+    rgba(248, 148, 6, 0.9) 100%);
+  border: none;
+  height: 8px;
+  border-radius: 4px;
+  box-shadow: 
+    0 0 12px rgba(248, 148, 6, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
-/* Webkit browsers (Chrome, Safari) */
-.range-slider::-webkit-slider-track {
-  height: 20px;
-  background: transparent;
-  border-radius: 10px;
+.range-slider .MuiSlider-rail {
+  background: rgba(255, 255, 255, 0.15);
+  height: 4px;
+  border-radius: 2px;
+  opacity: 1;
 }
 
-.range-slider::-webkit-slider-thumb {
-  appearance: none;
-  height: 16px;
-  width: 16px;
-  border-radius: 50%;
+.range-slider .MuiSlider-thumb {
   background: #ff8c00;
-  cursor: pointer;
-  border: 2px solid white;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  border: 3px solid white;
+  width: 18px;
+  height: 18px;
+  box-shadow: 0 2px 8px rgba(255, 140, 0, 0.4);
   transition: all 0.2s ease;
 }
 
-.range-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.15);
-  box-shadow: 0 0 12px rgba(255, 140, 0, 0.8);
+.range-slider .MuiSlider-thumb:first-of-type {
+  background: #20b2aa;
+  box-shadow: 0 2px 8px rgba(32, 178, 170, 0.4);
 }
 
-.range-slider::-webkit-slider-thumb:active {
-  transform: scale(1.2);
-}
-
-/* スタートスライダーのホバー効果 */
-.start-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.15);
-  box-shadow: 0 0 15px rgba(32, 178, 170, 0.8);
-}
-
-.start-slider::-webkit-slider-thumb:active {
-  transform: scale(1.2);
-}
-
-/* エンドスライダーのホバー効果 */
-.end-slider::-webkit-slider-thumb:hover {
+.range-slider .MuiSlider-thumb:hover {
   transform: scale(1.15);
   box-shadow: 0 0 15px rgba(255, 140, 0, 0.8);
 }
 
-.end-slider::-webkit-slider-thumb:active {
+.range-slider .MuiSlider-thumb:first-of-type:hover {
+  box-shadow: 0 0 15px rgba(32, 178, 170, 0.8);
+}
+
+.range-slider .MuiSlider-thumb:active {
   transform: scale(1.2);
 }
 
-/* Firefox */
-.range-slider::-moz-range-track {
-  height: 20px;
-  background: transparent;
-  border-radius: 10px;
-  border: none;
+.range-slider .MuiSlider-thumb.Mui-disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-.range-slider::-moz-range-thumb {
-  height: 16px;
-  width: 16px;
-  border-radius: 50%;
-  background: #ff8c00;
-  cursor: pointer;
-  border: 2px solid white;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+.range-slider .MuiSlider-valueLabel {
+  background: rgba(248, 148, 6, 0.9);
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  padding: 4px 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
-/* 開始と終了スライダーの区別 */
-.start-slider {
-  z-index: 4;
-  top: 40%; /* スタートスライダーを上にずらす */
-  transform: translateY(-50%);
-}
-
-.start-slider::-webkit-slider-thumb {
-  background: #20b2aa;
-  height: 18px;
-  width: 18px;
-  border: 3px solid white;
-  box-shadow: 0 2px 8px rgba(32, 178, 170, 0.4);
-}
-
-.start-slider::-moz-range-thumb {
-  background: #20b2aa;
-  height: 18px;
-  width: 18px;
-  border: 3px solid white;
-  box-shadow: 0 2px 8px rgba(32, 178, 170, 0.4);
-}
-
-.end-slider {
-  z-index: 5;
-  top: 60%; /* エンドスライダーを下にずらす */
-  transform: translateY(-50%);
-}
-
-.end-slider::-webkit-slider-thumb {
-  background: #ff8c00;
-  height: 18px;
-  width: 18px;
-  border: 3px solid white;
-  box-shadow: 0 2px 8px rgba(255, 140, 0, 0.4);
-}
-
-.end-slider::-moz-range-thumb {
-  background: #ff8c00;
-  height: 18px;
-  width: 18px;
-  border: 3px solid white;
-  box-shadow: 0 2px 8px rgba(255, 140, 0, 0.4);
+.range-slider .MuiSlider-valueLabel::before {
+  border-top-color: rgba(248, 148, 6, 0.9);
 }
 
 /* 現在再生中の位置インジケーター */
