@@ -72,6 +72,7 @@ function App() {
   const [isPlaybackActive, setIsPlaybackActive] = useState<boolean>(false);
   // デバウンス用のタイマーRef
   const zoomDebounceTimer = useRef<NodeJS.Timeout | null>(null);
+  const dateRangeDebounceTimer = useRef<NodeJS.Timeout | null>(null);
 
   // ズームレベル変更時のデバウンス処理
   const handleZoomChange = useCallback((newZoom: number) => {
@@ -91,6 +92,9 @@ function App() {
     return () => {
       if (zoomDebounceTimer.current) {
         clearTimeout(zoomDebounceTimer.current);
+      }
+      if (dateRangeDebounceTimer.current) {
+        clearTimeout(dateRangeDebounceTimer.current);
       }
     };
   }, []);
@@ -436,10 +440,18 @@ function App() {
     });
   }, [deckLayers]);
 
-  // 日付範囲設定ハンドラー
-  const handleDateRangeSelect = (start: Date, end: Date) => {
-    setDateRange({ start, end });
-  };
+  // 日付範囲設定ハンドラー（デバウンス処理付き）
+  const handleDateRangeSelect = useCallback((start: Date, end: Date) => {
+    // 現在のタイマーをクリア
+    if (dateRangeDebounceTimer.current) {
+      clearTimeout(dateRangeDebounceTimer.current);
+    }
+    
+    // 新しいタイマーを設定（500ms後に実行）
+    dateRangeDebounceTimer.current = setTimeout(() => {
+      setDateRange({ start, end });
+    }, 500);
+  }, []);
 
   // プログレスシミュレーション関数
   const simulateProgress = (onProgress: (progress: number, step: string) => void, signal: AbortSignal) => {
