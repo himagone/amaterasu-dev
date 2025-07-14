@@ -72,7 +72,6 @@ function Map(props: Props) {
         if (props.onZoomChange && map.current) {
           const currentZoom = map.current.getZoom();
           if (currentZoom !== undefined) {
-            console.log('Zoom changed to:', currentZoom);
             props.onZoomChange(currentZoom);
           }
         }
@@ -88,7 +87,6 @@ function Map(props: Props) {
     // 古いoverlayを削除
     if (deckOverlayRef.current) {
       try {
-        console.log('Removing old deck overlay');
         map.current.removeControl(deckOverlayRef.current);
         deckOverlayRef.current = null;
       } catch (error) {
@@ -99,7 +97,6 @@ function Map(props: Props) {
     // 新しいoverlayを追加
     if (props.deckOverlay) {
       try {
-        console.log('Adding deck overlay to map');
         map.current.addControl(props.deckOverlay);
         deckOverlayRef.current = props.deckOverlay;
       } catch (error) {

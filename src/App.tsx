@@ -1,15 +1,12 @@
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import Header from './components/Header.tsx'
 import Map from './components/Map.tsx'
 import './App.css'
 import Weather from './components/Weather.tsx'
 import { MapboxOverlay } from '@deck.gl/mapbox';
-import { H3ClusterLayer, H3HexagonLayer } from '@deck.gl/geo-layers';
-import { HeatmapLayer } from '@deck.gl/aggregation-layers';
+import { H3HexagonLayer } from '@deck.gl/geo-layers';
 import { ScatterplotLayer, IconLayer } from '@deck.gl/layers';
 import {Deck, PickingInfo} from '@deck.gl/core';
-import { cellToLatLng } from 'h3-js';
-import { easeCubic } from 'd3-ease';
 import TimeRangeSlider from './components/TimeRangeSlider'
 import LayerControls from './components/LayerControls'
 import LoadingComponent from './components/LoadingComponent'
@@ -41,21 +38,6 @@ type H3HeatmapData = {
   lng: number;
 };
 
-
-const materialProps = {
-  ambient: 0.5,
-  diffuse: 0.6,
-  shininess: 32,
-  specularColor: [51, 51, 51] as [number, number, number]
-};
-
-const defaultPersonCountRanges: PersonCountRange[] = [];
-const now = new Date();
-
-const getZoomLevelFile = (zoom: number): string => {
-  return `data_zoom_${Math.floor(zoom)}.csv`;
-};
-
 function App() {
   // UXフローの状態管理
   const [currentPhase, setCurrentPhase] = useState<UXPhase>(UXPhase.ANALYSIS);
@@ -69,7 +51,7 @@ function App() {
   const [loadingProgress, setLoadingProgress] = useState<number>(0);
   const [loadingStep, setLoadingStep] = useState<string>('');
   const [abortController, setAbortController] = useState<AbortController | null>(null);
-  
+
   const [layers, setLayers] = useState<any[]>([]);
   const [locationData, setLocationData] = useState<LocationData[]>([]);
   const [personCount, setPersonCount] = useState<PersonCountRange>({ min: 0, max: 0 });
@@ -77,11 +59,9 @@ function App() {
   const [selectedDateTime, setSelectedDateTime] = useState<Date>(new Date());
   const [availableTimes, setAvailableTimes] = useState<Set<string>>(new Set());
   const [currentZoom, setCurrentZoom] = useState<number>(10);
-  const [currentCsvFile, setCurrentCsvFile] = useState<string>(getZoomLevelFile(10));
-  const [showHeatmapLayer, setShowHeatmapLayer] = useState<boolean>(false);
+  const [showHeatmapLayer, setShowHeatmapLayer] = useState<boolean>(true); // デフォルトでヒートマップレイヤーを有効にする
   const [showH3Layer, setShowH3Layer] = useState<boolean>(false);
   const [heatmapData, setHeatmapData] = useState<heatmapPoints[]>([]);
-  const [h3Data, setH3Data] = useState<H3HeatmapData[]>([]);
   const [mapInstance, setMapInstance] = useState<any>(null);
   const mapInstanceRef = useRef<any>(null);
 
@@ -90,7 +70,30 @@ function App() {
   const [currentFrameIndex, setCurrentFrameIndex] = useState<number>(0);
   const [isTimeseriesMode, setIsTimeseriesMode] = useState<boolean>(false);
   const [isPlaybackActive, setIsPlaybackActive] = useState<boolean>(false);
+  // デバウンス用のタイマーRef
+  const zoomDebounceTimer = useRef<NodeJS.Timeout | null>(null);
 
+  // ズームレベル変更時のデバウンス処理
+  const handleZoomChange = useCallback((newZoom: number) => {
+    // 現在のタイマーをクリア
+    if (zoomDebounceTimer.current) {
+      clearTimeout(zoomDebounceTimer.current);
+    }
+    
+    // 新しいタイマーを設定（500ms後に実行）
+    zoomDebounceTimer.current = setTimeout(() => {
+      setCurrentZoom(newZoom);
+    }, 500);
+  }, []);
+
+  // クリーンアップ処理
+  useEffect(() => {
+    return () => {
+      if (zoomDebounceTimer.current) {
+        clearTimeout(zoomDebounceTimer.current);
+      }
+    };
+  }, []);
   // 地図インスタンスの安全な設定
   const handleSetMapInstance = (instance: any) => {
     try {
@@ -120,14 +123,6 @@ function App() {
   const [showDemographicLayer, setShowDemographicLayer] = useState<boolean>(false);
   const [demographicError, setDemographicError] = useState<string | null>(null);
 
-  const handleZoomChange = (zoom: number) => {
-    setCurrentZoom(zoom);
-    const newFile = getZoomLevelFile(zoom);
-    if (newFile !== currentCsvFile) {
-      setCurrentCsvFile(newFile);
-    }
-  };
-
   // ズームレベルが変更された際にヒートマップデータを自動更新（タイムスライダー変更時は除く）
   useEffect(() => {
     // ヒートマップが表示されていて、日付範囲が設定されている場合のみ自動更新
@@ -135,6 +130,7 @@ function App() {
       const updateHeatmapData = async () => {
         try{
           setIsHeatmapLoading(true);
+          setHeatmapError(null);
 
           let bounds = null;
           const currentMapInstance = mapInstanceRef.current || mapInstance;
@@ -161,13 +157,15 @@ function App() {
 
           setHeatmapData(data);
         }catch(error){
-          console.error('Failed to update heatmap data:', error);
+          setHeatmapError(error instanceof Error ? error.message : 'ヒートマップデータの更新に失敗しました');
+        } finally {
+          setIsHeatmapLoading(false);
         }
       }
 
       updateHeatmapData();
     }
-  }, [currentZoom, showHeatmapLayer]); // dateRangeの監視を削除
+  }, [currentZoom, showHeatmapLayer, dateRange, mapInstance]); // dateRangeとmapInstanceも監視に追加
 
       const handleHeatmapDataUpdate = (data: heatmapPoints[]) => {
       setHeatmapData(data);
@@ -266,7 +264,6 @@ function App() {
       setDemographicPointData(data);
       setShowDemographicLayer(true);
       
-      console.log('人口統計フィルター適用完了:', data.length, 'ポイント');
 
     } catch (error) {
       console.error('人口統計データ取得エラー:', error);
@@ -496,7 +493,6 @@ function App() {
           east: mapBounds.getEast(),
           west: mapBounds.getWest()
         };
-        console.log('Map bounds:', bounds);
       } catch (error) {
         console.warn('Failed to get map bounds:', error);
       }
@@ -532,31 +528,15 @@ function App() {
       // 両方の処理を待つ
       const [, timeseriesData] = await Promise.all([progressPromise, timeseriesPromise]);
       
-      // デバッグ: タイムシリーズデータの内容を確認
-      console.log('🔍 取得したタイムシリーズデータ:', {
-        データ件数: timeseriesData.length,
-        最初のフレーム: timeseriesData[0] || 'なし',
-        全データ: timeseriesData
-      });
-      
       // タイムシリーズデータを設定
       setTimeseriesData(timeseriesData);
       setIsTimeseriesMode(timeseriesData.length > 0);
       setCurrentFrameIndex(0);
       
-      // 最初のフレームのデータでヒートマップを初期化
-      if (timeseriesData.length > 0) {
-        setHeatmapData(timeseriesData[0].points);
-        console.log('✅ 再生ボタンが有効になるはずです');
-      } else {
-        console.log('❌ タイムシリーズデータが空のため、再生ボタンは無効のままです');
-      }
-      
       setShowHeatmapLayer(true);
       setCurrentPhase(UXPhase.ANALYSIS);
     } catch (error) {
       if (error instanceof DOMException && error.name === 'AbortError') {
-        console.log('Request was cancelled');
         setCurrentPhase(UXPhase.ANALYSIS);
       } else {
         console.error('Error fetching timeseries data:', error);
