@@ -27,7 +27,8 @@ export const buildHeatmapRequest = (
   startDate: Date, 
   endDate: Date, 
   zoom: number,
-  bounds?: {north: number, south: number, east: number, west: number}
+  bounds?: {north: number, south: number, east: number, west: number},
+  activityTypes?: string[]
 ): heatmapRequestParam => {
   const requestParam: heatmapRequestParam = {
     startTime: formatDateTime(startDate),
@@ -38,7 +39,8 @@ export const buildHeatmapRequest = (
       minLng: 133.97372,
       maxLng: 134.17372
     },
-    zoom: zoom
+    zoom: zoom,
+    activityTypes: activityTypes || ["on_foot", "walking", "running","still"]
   };
   
   return requestParam;
@@ -72,9 +74,10 @@ export const getHeatmapData = async (
   endDate: Date,
   zoom: number,
   bounds?: {north: number, south: number, east: number, west: number},
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  activityTypes?: string[]
 ): Promise<heatmapPoints[]> => {
-  const requestParam = buildHeatmapRequest(startDate, endDate, zoom, bounds);
+  const requestParam = buildHeatmapRequest(startDate, endDate, zoom, bounds, activityTypes);
   const response = await fetchHeatmap('http://localhost:8080/api/v1/heatmap/aggregate', requestParam, signal);
   
   return response.points || [];
@@ -109,7 +112,8 @@ export const getHeatmapTimeseriesData = async (
   zoom: number,
   intervalMinutes: number = 1, // デフォルト1分区切り
   bounds?: {north: number, south: number, east: number, west: number},
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  activityTypes?: string[]
 ): Promise<{timestamp: string, points: heatmapPoints[]}[]> => {
   const requestParam: heatmapTimeseriesRequestParam = {
     startTime: formatDateTime(startDate),
@@ -121,22 +125,11 @@ export const getHeatmapTimeseriesData = async (
       maxLng: 134.17372
     },
     zoom: zoom,
-    intervalMinutes: intervalMinutes
-  };
-  
-  console.log('🚀 タイムシリーズAPI呼び出し開始:', {
-    リクエストパラメータ: requestParam,
-    エンドポイント: 'http://localhost:8080/api/v1/heatmap/timeseries'
-  });
-  
+    intervalMinutes: intervalMinutes,
+    activityTypes: activityTypes || ["on_foot", "walking", "running","still"]
+  };  
   const response = await fetchHeatmapTimeseries('http://localhost:8080/api/v1/heatmap/timeseries', requestParam, signal);
-  
-  console.log('📥 タイムシリーズAPIレスポンス:', {
-    データ件数: response.data?.length || 0,
-    timeSlices件数: response.timeSlices?.length || 0,
-    レスポンス: response
-  });
-  
+
   // APIレスポンスの構造に合わせて変換
   let result: {timestamp: string, points: heatmapPoints[]}[] = [];
   

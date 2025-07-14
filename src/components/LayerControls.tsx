@@ -1,6 +1,7 @@
 import React from 'react';
 import HeatmapControl from './HeatmapControl';
 import DemographicFilter from './DemographicFilter';
+import TransportationModeSelector from './TransportationModeSelector';
 import { DemographicFilters } from '../types/demographicData';
 
 interface HeatmapPoint {
@@ -52,6 +53,9 @@ interface LayerControlsProps {
   isDemographicLoading?: boolean;
   demographicError?: string | null;
   setDemographicError?: (error: string | null) => void;
+  // 交通手段選択関連
+  selectedTransportationMode?: string;
+  onTransportationModeChange?: (mode: string, activityTypes: string[]) => void;
 }
 
 const LayerControls: React.FC<LayerControlsProps> = ({
@@ -63,23 +67,15 @@ const LayerControls: React.FC<LayerControlsProps> = ({
   setHeatmapData,
   heatmapError,
   setHeatmapError,
-  isHeatmapLoading,
   dateRange,
-  showH3Heatmap = false,
-  setShowH3Heatmap,
-  showH3Layer,
-  setShowH3Layer,
-  h3Data = [],
-  personCountRangesH3 = [],
-  setPersonCountRangesH3,
   // 人口統計フィルター関連
   onDemographicFiltersChange,
   onApplyDemographicFilters,
   isDemographicLoading = false,
-  demographicError,
-  setDemographicError
+  // 交通手段選択関連
+  selectedTransportationMode = 'walking',
+  onTransportationModeChange
 }) => {
-  const [showAdvancedSettings, setShowAdvancedSettings] = React.useState(false);
 
   return (
     <div className={`visualization-controls ${isControlsCollapsed ? 'collapsed' : ''}`}>
@@ -98,6 +94,14 @@ const LayerControls: React.FC<LayerControlsProps> = ({
         {/* 詳細設定 */}
         <div className="advanced-settings">
           <div className="advanced-content">
+            {/* 交通手段選択 */}
+            {onTransportationModeChange && (
+              <TransportationModeSelector
+                selectedMode={selectedTransportationMode}
+                onModeChange={onTransportationModeChange}
+              />
+            )}
+            
             <HeatmapControl
               showHeatmapLayer={showHeatmapLayer}
               setShowHeatmapLayer={setShowHeatmapLayer}

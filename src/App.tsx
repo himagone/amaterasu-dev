@@ -11,6 +11,7 @@ import TimeRangeSlider from './components/TimeRangeSlider'
 import LayerControls from './components/LayerControls'
 import LoadingComponent from './components/LoadingComponent'
 import MarketingInsights from './components/MarketingInsights'
+import TransportationModeSelector from './components/TransportationModeSelector'
 import getHeatmapData from './utils/getHeatmap'
 import { getHeatmapTimeseriesData } from './utils/getHeatmap'
 import { heatmapPoints } from './types/heatmap'
@@ -127,6 +128,10 @@ function App() {
   const [showDemographicLayer, setShowDemographicLayer] = useState<boolean>(false);
   const [demographicError, setDemographicError] = useState<string | null>(null);
 
+  // 交通手段選択関連のstate
+  const [selectedTransportationMode, setSelectedTransportationMode] = useState<string>('walking');
+  const [selectedActivityTypes, setSelectedActivityTypes] = useState<string[]>(['on_foot', 'walking', 'running', 'still']);
+
   // ズームレベルが変更された際にヒートマップデータを自動更新（タイムスライダー変更時は除く）
   useEffect(() => {
     // ヒートマップが表示されていて、日付範囲が設定されている場合のみ自動更新
@@ -156,7 +161,9 @@ function App() {
             dateRange.start,
             dateRange.end,
             currentZoom,
-            bounds || undefined
+            bounds || undefined,
+            undefined, // signal
+            selectedActivityTypes
           );
 
           setHeatmapData(data);
@@ -169,7 +176,7 @@ function App() {
 
       updateHeatmapData();
     }
-  }, [currentZoom, showHeatmapLayer, dateRange, mapInstance]); // dateRangeとmapInstanceも監視に追加
+  }, [currentZoom, showHeatmapLayer, dateRange, mapInstance, selectedActivityTypes]); // selectedActivityTypesも監視に追加
 
       const handleHeatmapDataUpdate = (data: heatmapPoints[]) => {
       setHeatmapData(data);
@@ -208,6 +215,12 @@ function App() {
       const currentFrameData = timeseriesData[frameIndex];
       setHeatmapData(currentFrameData.points);
     }
+  };
+
+  // 交通手段選択の変更ハンドラー
+  const handleTransportationModeChange = (mode: string, activityTypes: string[]) => {
+    setSelectedTransportationMode(mode);
+    setSelectedActivityTypes(activityTypes);
   };
 
   // 人口統計フィルター処理関数
@@ -316,7 +329,7 @@ function App() {
         stroked: false,
         filled: true,
         extruded: false,
-        opacity: 0.8,
+        opacity: 0.4,
         pickable: true
       });
 
@@ -600,6 +613,8 @@ function App() {
             setHeatmapError={setHeatmapError}
             isHeatmapLoading={isHeatmapLoading}
             dateRange={dateRange}
+            selectedTransportationMode={selectedTransportationMode}
+            onTransportationModeChange={handleTransportationModeChange}
             onDemographicFiltersChange={handleDemographicFiltersChange}
             onApplyDemographicFilters={handleApplyDemographicFilters}
             isDemographicLoading={isDemographicLoading}

@@ -46,7 +46,8 @@ export interface heatmapRequestParam {
   startTime: string,
   endTime: string,
   bbox: bbox,
-  zoom: number
+  zoom: number,
+  activityTypes: string[]
 }
 
 // timeseries APIのリクエストパラメータ型
@@ -55,7 +56,8 @@ export interface heatmapTimeseriesRequestParam {
   endTime: string,
   bbox: bbox,
   zoom: number,
-  intervalMinutes: number
+  intervalMinutes: number,
+  activityTypes?: string[]
 }
 
 export interface pointsRequestParam {
