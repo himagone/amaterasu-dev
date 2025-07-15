@@ -130,7 +130,8 @@ function App() {
   // ズームレベルが変更された際にヒートマップデータを自動更新（タイムスライダー変更時は除く）
   useEffect(() => {
     // ヒートマップが表示されていて、日付範囲が設定されている場合のみ自動更新
-    if (showHeatmapLayer && dateRange && !isHeatmapLoading) {
+    // 再生中の場合は更新しない
+    if (showHeatmapLayer && dateRange && !isHeatmapLoading && !isPlaybackActive) {
       const updateHeatmapData = async () => {
         try{
           setIsHeatmapLoading(true);
@@ -171,7 +172,7 @@ function App() {
 
       updateHeatmapData();
     }
-  }, [currentZoom, showHeatmapLayer, dateRange, mapInstance, selectedActivityTypes]); // selectedActivityTypesも監視に追加
+  }, [currentZoom, showHeatmapLayer, dateRange, mapInstance, selectedActivityTypes, isPlaybackActive]); // isPlaybackActiveも監視に追加
 
       const handleHeatmapDataUpdate = (data: heatmapPoints[]) => {
       setHeatmapData(data);
@@ -463,8 +464,8 @@ function App() {
 
 
 
-  // 適用ボタンが押された時の処理（タイムシリーズデータを取得）
-  const handleApplyDateRange = async () => {
+  // 再生ボタンが押された時の処理（タイムシリーズデータを取得）
+  const fetchTimeseriesData = async () => {
     
     // 地図の表示範囲を取得
     let bounds = null;
@@ -552,7 +553,7 @@ function App() {
           {/* タイムスライダー */}
           <TimeRangeSlider 
             onDateRangeSelect={handleDateRangeSelect}
-            onApply={handleApplyDateRange}
+            fetchTimeseriesData={fetchTimeseriesData}
             onTimeseriesDataUpdate={handleTimeseriesDataUpdate}
             onPlayStateChange={handlePlayStateChange}
             timeseriesData={timeseriesData}

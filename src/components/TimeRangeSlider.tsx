@@ -46,7 +46,7 @@ const generateTimeSlots = (): TimeSlot[] => {
 
 type Props = {
   onDateRangeSelect: (start: Date, end: Date) => void;
-  onApply: () => Promise<void>;
+  fetchTimeseriesData: () => Promise<void>;
   onTimeseriesDataUpdate?: (timeseriesData: {timestamp: string, points: any[]}[]) => void;
   onPlayStateChange?: (isPlaying: boolean, currentFrameIndex: number) => void;
   timeseriesData?: {timestamp: string, points: any[]}[];
@@ -55,7 +55,7 @@ type Props = {
 
 function TimeRangeSlider(props: Props) {
   const [timeSlots] = useState(generateTimeSlots());
-  const [sliderValue, setSliderValue] = useState<number[]>([900, 960]); // 最初の日の15:00-16:00
+  const [sliderValue, setSliderValue] = useState<number[]>([8000, 9000]); // 最初の日の15:00-16:00
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [currentFrameIndex, setCurrentFrameIndex] = useState<number>(0);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1000); // 1秒間隔
@@ -84,7 +84,7 @@ function TimeRangeSlider(props: Props) {
     return `${date.getMonth() + 1}/${date.getDate()}(${weekday}) ${slot.displayLabel}`;
   };
 
-  // 日本語の曜日を取得
+  // 曜日を取得
   const getJapaneseWeekday = (date: Date): string => {
     const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
     return weekdays[date.getDay()];
@@ -113,17 +113,33 @@ function TimeRangeSlider(props: Props) {
   };
 
   // 再生/停止トグル
-  const togglePlay = () => {
+  const togglePlay = async () => {
     if (isPlaying) {
       stopPlayback();
     } else {
-      startPlayback();
+      await startPlayback();
     }
   };
 
   // 再生開始
-  const startPlayback = () => {
-    if (timeseriesData.length === 0) return;
+  const startPlayback = async () => {
+    // timeseriesデータがない場合は先にデータを取得
+    if (timeseriesData.length === 0) {
+      try {
+        await props.fetchTimeseriesData();
+        // データが更新されるまで少し待つ
+        await new Promise(resolve => setTimeout(resolve, 100));
+      } catch (error) {
+        console.error('Failed to fetch timeseries data:', error);
+        return;
+      }
+    }
+    
+    // データ取得後に再度チェック
+    if (timeseriesData.length === 0) {
+      console.warn('No timeseries data available after fetch');
+      return;
+    }
     
     setIsPlaying(true);
     setCurrentFrameIndex(0);
@@ -244,8 +260,8 @@ function TimeRangeSlider(props: Props) {
         <button 
           className={`play-button ${isPlaying ? 'playing' : ''}`}
           onClick={togglePlay}
-          disabled={props.isLoading || timeseriesData.length === 0}
-          title={timeseriesData.length === 0 ? '時間範囲を選択して「適用」ボタンを押してください' : isPlaying ? '再生を停止' : '再生を開始'}
+          disabled={props.isLoading}
+          title={isPlaying ? '再生を停止' : '再生を開始'}
         >
           {isPlaying ? '⏸' : '▷'}
         </button>
@@ -254,7 +270,7 @@ function TimeRangeSlider(props: Props) {
         {timeseriesData.length === 0 && !props.isLoading && (
           <div className="playback-guide">
             <span className="guide-text">
-              💡 時間範囲を選択して「適用」ボタンを押すと再生できます
+              💡 時間範囲を選択して再生ボタンを押してください
             </span>
           </div>
         )}
@@ -299,7 +315,7 @@ function TimeRangeSlider(props: Props) {
             valueLabelDisplay="auto"
             min={0}
             max={timeSlots.length - 1}
-            disabled={props.isLoading}
+            disabled={props.isLoading || isPlaying}
             className="range-slider"
             getAriaValueText={(value) => {
               const slot = timeSlots[value];
@@ -309,6 +325,10 @@ function TimeRangeSlider(props: Props) {
               return `${date.getMonth() + 1}/${date.getDate()}(${weekday}) ${slot.displayLabel}`;
             }}
             valueLabelFormat={formatTimeLabel}
+            marks={false}
+            step={1}
+            track="normal"
+            disableSwap
           />
 
           {/* 時間目盛り */}
@@ -339,15 +359,6 @@ function TimeRangeSlider(props: Props) {
             ))}
           </div>
         </div>
-
-        {/* 適用ボタン */}
-        <button 
-          className={`apply-btn ${timeseriesData.length === 0 && !props.isLoading ? 'highlight' : ''}`}
-          onClick={props.onApply}
-          disabled={props.isLoading}
-        >
-          {props.isLoading ? '読込中' : '適用'}
-        </button>
       </div>
     </div>
   );
