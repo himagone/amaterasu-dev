@@ -113,21 +113,6 @@ const TransportationModeSelector: React.FC<TransportationModeSelectorProps> = ({
             </ToggleButton>
           ))}
         </ToggleButtonGroup>
-
-        {/* 選択状況の表示 */}
-        <Box display="flex" alignItems="center" justifyContent="center">
-          {selectedMode && (
-            <Chip
-              label={TRANSPORTATION_MODES.find(m => m.id === selectedMode)?.name || ''}
-              size="small"
-              sx={{
-                bgcolor: TRANSPORTATION_MODES.find(m => m.id === selectedMode)?.color || '#ccc',
-                color: 'white',
-                fontWeight: 600
-              }}
-            />
-          )}
-        </Box>
       </CardContent>
     </Card>
   );

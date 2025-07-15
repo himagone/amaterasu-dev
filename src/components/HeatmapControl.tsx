@@ -91,11 +91,6 @@ const HeatmapControl: React.FC<HeatmapControlProps> = ({
                 <span>1000人以上</span>
               </div>
             </div>
-            {heatmapData.length > 0 && (
-              <div className="legend-range-info">
-                実際の範囲: {Math.min(...heatmapData.map(d => d.value || d.intensity || 1))} - {Math.max(...heatmapData.map(d => d.value || d.intensity || 1))} 人
-              </div>
-            )}
           </div>
         </div>
       </div>

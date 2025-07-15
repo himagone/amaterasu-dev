@@ -117,14 +117,6 @@ const MarketingInsights: React.FC<MarketingInsightsProps> = ({
     <div className="marketing-insights">
       <div className="insights-header">
         <h2>📊 マーケティングインサイト</h2>
-        <div className="header-actions">
-          {isPlaying && (
-            <div className="status-indicator">
-              <span className="status-dot active"></span>
-              データ分析中
-            </div>
-          )}
-        </div>
       </div>
 
       <div className="insights-grid">

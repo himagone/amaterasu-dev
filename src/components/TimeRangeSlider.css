@@ -16,7 +16,7 @@
 /* 選択範囲インジケーター */
 .selection-indicator {
   position: absolute;
-  top: -90px;
+  top: -70px;
   left: 50%;
   transform: translateX(-50%);
   background: rgba(248, 148, 6, 0.95);

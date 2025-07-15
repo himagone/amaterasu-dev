@@ -1,7 +1,7 @@
 .marketing-insights {
   position: fixed;
-  top: 120px;
-  right: 20px;
+  top: 180px;
+  left: 20px;
   width: 380px;
   background: rgba(17, 24, 39, 0.95);
   backdrop-filter: blur(12px);

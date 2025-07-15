@@ -265,16 +265,6 @@ function TimeRangeSlider(props: Props) {
         >
           {isPlaying ? '⏸' : '▷'}
         </button>
-        
-        {/* ガイドメッセージ */}
-        {timeseriesData.length === 0 && !props.isLoading && (
-          <div className="playback-guide">
-            <span className="guide-text">
-              💡 時間範囲を選択して再生ボタンを押してください
-            </span>
-          </div>
-        )}
-
         {/* タイムライン */}
         <div className="timeline">
           {/* 背景バー */}
