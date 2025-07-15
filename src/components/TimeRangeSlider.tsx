@@ -75,6 +75,32 @@ function TimeRangeSlider(props: Props) {
     });
   }, [timeseriesData, props.isLoading]);
 
+  // timeseriesDataが更新され、ローディングが完了した時に自動的に再生を開始
+  const [shouldAutoPlay, setShouldAutoPlay] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (shouldAutoPlay && !props.isLoading && timeseriesData.length > 0 && !isPlaying) {
+      console.log('🎬 Auto-starting playback after data load');
+      setShouldAutoPlay(false);
+      
+      setIsPlaying(true);
+      setCurrentFrameIndex(0);
+      
+      playbackIntervalRef.current = setInterval(() => {
+        setCurrentFrameIndex((prevIndex) => {
+          const nextIndex = (prevIndex + 1) % timeseriesData.length;
+          
+          // 親コンポーネントに再生状態を通知
+          if (props.onPlayStateChange) {
+            props.onPlayStateChange(true, nextIndex);
+          }
+          
+          return nextIndex;
+        });
+      }, playbackSpeed);
+    }
+  }, [shouldAutoPlay, props.isLoading, timeseriesData.length, isPlaying, playbackSpeed, props.onPlayStateChange]);
+
   // スロットインデックスを時間形式に変換する関数
   const formatTimeLabel = (value: number) => {
     const slot = timeSlots[value];
@@ -126,21 +152,18 @@ function TimeRangeSlider(props: Props) {
     // timeseriesデータがない場合は先にデータを取得
     if (timeseriesData.length === 0) {
       try {
+        setShouldAutoPlay(true); // データ取得後に自動再生するフラグを設定
         await props.fetchTimeseriesData();
-        // データが更新されるまで少し待つ
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // fetchTimeseriesDataが完了した後、useEffectで自動再生される
+        return;
       } catch (error) {
         console.error('Failed to fetch timeseries data:', error);
+        setShouldAutoPlay(false); // エラー時はフラグをリセット
         return;
       }
     }
     
-    // データ取得後に再度チェック
-    if (timeseriesData.length === 0) {
-      console.warn('No timeseries data available after fetch');
-      return;
-    }
-    
+    // データが既にある場合は即座に再生開始
     setIsPlaying(true);
     setCurrentFrameIndex(0);
     
@@ -258,12 +281,16 @@ function TimeRangeSlider(props: Props) {
       <div className="timeline-container" ref={timelineRef}>
         {/* 再生ボタン */}
         <button 
-          className={`play-button ${isPlaying ? 'playing' : ''}`}
+          className={`play-button ${isPlaying ? 'playing' : ''} ${props.isLoading ? 'loading' : ''}`}
           onClick={togglePlay}
           disabled={props.isLoading}
-          title={isPlaying ? '再生を停止' : '再生を開始'}
+          title={props.isLoading ? 'データを読み込み中...' : (isPlaying ? '再生を停止' : '再生を開始')}
         >
-          {isPlaying ? '⏸' : '▷'}
+          {props.isLoading ? (
+            <div className="loading-spinner"></div>
+          ) : (
+            isPlaying ? '⏸' : '▷'
+          )}
         </button>
         {/* タイムライン */}
         <div className="timeline">

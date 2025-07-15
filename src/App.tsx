@@ -66,6 +66,7 @@ function App() {
   const [currentFrameIndex, setCurrentFrameIndex] = useState<number>(0);
   const [isTimeseriesMode, setIsTimeseriesMode] = useState<boolean>(false);
   const [isPlaybackActive, setIsPlaybackActive] = useState<boolean>(false);
+  const [isTimeseriesLoading, setIsTimeseriesLoading] = useState<boolean>(false);
   // デバウンス用のタイマーRef
   const zoomDebounceTimer = useRef<NodeJS.Timeout | null>(null);
   const dateRangeDebounceTimer = useRef<NodeJS.Timeout | null>(null);
@@ -466,6 +467,7 @@ function App() {
 
   // 再生ボタンが押された時の処理（タイムシリーズデータを取得）
   const fetchTimeseriesData = async () => {
+    setIsTimeseriesLoading(true);
     
     // 地図の表示範囲を取得
     let bounds = null;
@@ -503,6 +505,8 @@ function App() {
     } catch (error) {
       console.error('Error fetching timeseries data:', error);
       setHeatmapError(error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setIsTimeseriesLoading(false);
     }
   };
 
@@ -557,7 +561,7 @@ function App() {
             onTimeseriesDataUpdate={handleTimeseriesDataUpdate}
             onPlayStateChange={handlePlayStateChange}
             timeseriesData={timeseriesData}
-            isLoading={false}
+            isLoading={isTimeseriesLoading}
           />
 
         </div>

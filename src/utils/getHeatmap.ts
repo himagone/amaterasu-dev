@@ -101,7 +101,6 @@ const fetchHeatmapTimeseries = async (url: string, requestParam: heatmapTimeseri
   }
 
   const data: heatmapTimeseriesResponse = await response.json();
-  console.log('Received heatmap timeseries data:', data);
   return data;
 };
 
@@ -139,26 +138,9 @@ export const getHeatmapTimeseriesData = async (
       timestamp: timeSlice.timestamp || timeSlice.time || '',
       points: timeSlice.points || []
     }));
-    
-    console.log('🔄 timeSlicesを変換しました:', {
-      変換前: response.timeSlices.length,
-      変換後: result.length,
-      最初のタイムスライス: response.timeSlices[0],
-      最初の変換結果: result[0]
-    });
   } else if (response.data && Array.isArray(response.data)) {
-    // 既存のdata形式の場合はそのまま使用
     result = response.data;
-    console.log('📄 既存のdata形式を使用');
-  } else {
-    console.warn('⚠️ 予期しないレスポンス構造:', response);
   }
-  
-  console.log('✨ 最終的に返されるタイムシリーズデータ:', {
-    件数: result.length,
-    データ: result
-  });
-  
   return result;
 };
 
