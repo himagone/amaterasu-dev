@@ -94,6 +94,12 @@ function TimeRangeSlider(props: Props) {
   const handleSliderChange = (event: Event, newValue: number | number[]) => {
     if (Array.isArray(newValue)) {
       setSliderValue(newValue);
+    }
+  };
+
+  // スライダーの操作が完了したときの処理
+  const handleSliderChangeCommitted = (event: Event | React.SyntheticEvent, newValue: number | number[]) => {
+    if (Array.isArray(newValue)) {
       updateDateRange(newValue[0], newValue[1]);
     }
   };
@@ -289,6 +295,7 @@ function TimeRangeSlider(props: Props) {
             getAriaLabel={() => 'Time range'}
             value={sliderValue}
             onChange={handleSliderChange}
+            onChangeCommitted={handleSliderChangeCommitted}
             valueLabelDisplay="auto"
             min={0}
             max={timeSlots.length - 1}

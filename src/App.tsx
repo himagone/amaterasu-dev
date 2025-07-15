@@ -9,7 +9,6 @@ import { ScatterplotLayer, IconLayer } from '@deck.gl/layers';
 import {Deck, PickingInfo} from '@deck.gl/core';
 import TimeRangeSlider from './components/TimeRangeSlider'
 import LayerControls from './components/LayerControls'
-import LoadingComponent from './components/LoadingComponent'
 import MarketingInsights from './components/MarketingInsights'
 import TransportationModeSelector from './components/TransportationModeSelector'
 import getHeatmapData from './utils/getHeatmap'
@@ -22,7 +21,6 @@ import { DemographicFilters, DemographicPoint } from './types/demographicData'
 // UXフローの段階を定義
 enum UXPhase {
   DATE_SELECTION = 'date_selection',
-  LOADING = 'loading',
   ANALYSIS = 'analysis'
 }
 
@@ -49,9 +47,6 @@ function App() {
     start: defaultStartDate,
     end: defaultEndDate
   });
-  const [loadingProgress, setLoadingProgress] = useState<number>(0);
-  const [loadingStep, setLoadingStep] = useState<string>('');
-  const [abortController, setAbortController] = useState<AbortController | null>(null);
 
   const [layers, setLayers] = useState<any[]>([]);
   const [locationData, setLocationData] = useState<LocationData[]>([]);
@@ -466,42 +461,7 @@ function App() {
     }, 500);
   }, []);
 
-  // プログレスシミュレーション関数
-  const simulateProgress = (onProgress: (progress: number, step: string) => void, signal: AbortSignal) => {
-    return new Promise<void>((resolve, reject) => {
-      const steps = [
-        { progress: 20, step: 'データベースに接続中...', delay: 800 },
-        { progress: 40, step: 'クエリを実行中...', delay: 1200 },
-        { progress: 60, step: 'データを集計中...', delay: 1500 },
-        { progress: 80, step: 'ヒートマップを生成中...', delay: 1000 },
-        { progress: 100, step: '最終処理中...', delay: 200 },
-      ];
 
-      let currentStepIndex = 0;
-
-      const processStep = () => {
-        if (signal.aborted) {
-          reject(new DOMException('Aborted', 'AbortError'));
-          return;
-        }
-
-        if (currentStepIndex >= steps.length) {
-          resolve();
-          return;
-        }
-
-        const step = steps[currentStepIndex];
-        onProgress(step.progress, step.step);
-
-        setTimeout(() => {
-          currentStepIndex++;
-          processStep();
-        }, step.delay);
-      };
-
-      processStep();
-    });
-  };
 
   // 適用ボタンが押された時の処理（タイムシリーズデータを取得）
   const handleApplyDateRange = async () => {
@@ -523,35 +483,15 @@ function App() {
       }
     }
     
-    setCurrentPhase(UXPhase.LOADING);
-    setLoadingProgress(0);
-    setLoadingStep('初期化中...');
-    
-    // AbortControllerを作成
-    const controller = new AbortController();
-    setAbortController(controller);
-    
     try {
-      const progressPromise = simulateProgress(
-        (progress, step) => {
-          setLoadingProgress(progress);
-          setLoadingStep(step);
-        },
-        controller.signal
-      );
-
       // タイムシリーズデータを取得（1分間隔）
-      const timeseriesPromise = getHeatmapTimeseriesData(
+      const timeseriesData = await getHeatmapTimeseriesData(
         dateRange.start,
         dateRange.end,
         currentZoom,
         1, // 1分間隔
-        bounds || undefined,
-        controller.signal
+        bounds || undefined
       );
-
-      // 両方の処理を待つ
-      const [, timeseriesData] = await Promise.all([progressPromise, timeseriesPromise]);
       
       // タイムシリーズデータを設定
       setTimeseriesData(timeseriesData);
@@ -559,37 +499,17 @@ function App() {
       setCurrentFrameIndex(0);
       
       setShowHeatmapLayer(true);
-      setCurrentPhase(UXPhase.ANALYSIS);
     } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') {
-        setCurrentPhase(UXPhase.ANALYSIS);
-      } else {
-        console.error('Error fetching timeseries data:', error);
-        setHeatmapError(error instanceof Error ? error.message : 'Unknown error');
-        setCurrentPhase(UXPhase.ANALYSIS);
-      }
-    } finally {
-      setAbortController(null);
-      setLoadingProgress(0);
-      setLoadingStep('');
+      console.error('Error fetching timeseries data:', error);
+      setHeatmapError(error instanceof Error ? error.message : 'Unknown error');
     }
   };
 
   return (
     <>
       <div className="app">
-
-
-        {/* ローディング表示 - React Awesome Loaders使用 */}
-        {currentPhase === UXPhase.LOADING && (
-          <LoadingComponent
-            progress={loadingProgress}
-            text={loadingStep}
-          />
-        )}
-
-        {/* メインコンテンツ - 透過度とインタラクション制御 */}
-        <div className={`main-content ${currentPhase === UXPhase.LOADING ? 'disabled-overlay' : ''}`}>
+        {/* メインコンテンツ */}
+        <div className="main-content">
           <Header />
           <Map 
             currentDate={currentDate} 
@@ -636,7 +556,7 @@ function App() {
             onTimeseriesDataUpdate={handleTimeseriesDataUpdate}
             onPlayStateChange={handlePlayStateChange}
             timeseriesData={timeseriesData}
-            isLoading={currentPhase === UXPhase.LOADING}
+            isLoading={false}
           />
 
         </div>
