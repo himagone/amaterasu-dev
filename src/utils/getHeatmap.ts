@@ -1,4 +1,4 @@
-import { heatmapResponse, heatmapRequestParam, queryFilter, bbox, heatmapPoints, heatmapTimeseriesResponse, heatmapTimeseriesRequestParam } from '../types/heatmap';
+import { heatmapResponse, heatmapRequestParam, bbox, heatmapPoints, heatmapTimeseriesResponse, heatmapTimeseriesRequestParam, heatmapEventParticipantRequestParam, heatmapEventParticipantResponse } from '../types/heatmap';
 
 // 日時を YYYY-MM-DDTHH:mm:ss 形式にフォーマット
 const formatDateTime = (date: Date): string => {
@@ -48,7 +48,6 @@ export const buildHeatmapRequest = (
 
 // ヒートマップデータを取得
 const fetchHeatmap = async (url: string, requestParam: heatmapRequestParam, signal?: AbortSignal): Promise<heatmapResponse> => {
-  console.log('Sending heatmap request:', requestParam);
 
   const response = await fetch(url, {
     method: 'POST',
@@ -64,11 +63,10 @@ const fetchHeatmap = async (url: string, requestParam: heatmapRequestParam, sign
   }
 
   const data: heatmapResponse = await response.json();
-  console.log('Received heatmap data:', data);
   return data;
 };
 
-// メイン関数：ヒートマップデータを取得
+// ヒートマップデータを取得
 export const getHeatmapData = async (
   startDate: Date,
   endDate: Date,
@@ -126,7 +124,7 @@ export const getHeatmapTimeseriesData = async (
     zoom: zoom,
     intervalMinutes: intervalMinutes,
     activityTypes: activityTypes || ["on_foot", "walking", "running","still"]
-  };  
+  }; 
   const response = await fetchHeatmapTimeseries('http://localhost:8080/api/v1/heatmap/timeseries', requestParam, signal);
 
   // APIレスポンスの構造に合わせて変換
@@ -142,6 +140,56 @@ export const getHeatmapTimeseriesData = async (
     result = response.data;
   }
   return result;
+};
+
+const fetchHeatmapEventParticipant = async (url: string, requestParam: heatmapEventParticipantRequestParam): Promise<heatmapEventParticipantResponse> => {
+  console.log('EVENT PARAM:', requestParam);
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestParam),
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+  
+  const data: heatmapEventParticipantResponse = await response.json();
+  return data;
+};
+
+// 穴吹アリーナにイベント期間中滞在した人のヒートマップデータを取得
+export const getHeatmapEventParticipant = async (
+  startDate: Date,
+  endDate: Date,
+  zoom: number,
+  radiusMeters: number = 200, // 半径デフォルト200m
+  minStayMinutes: number = 30, // 滞在時間デフォルト30min
+): Promise<heatmapEventParticipantResponse> => {
+  const requestParam: heatmapEventParticipantRequestParam = {
+    analysisStartTime: formatDateTime(startDate),
+    analysisEndTime: formatDateTime(endDate),
+    venueLat: 34.35370012, // 穴吹アリーナの緯度
+    venueLng: 134.0459301, // 穴吹アリーナの
+    eventTimeSlots: [
+      {
+        startTime: "2025-03-01T16:00:00",
+        endTime: "2025-03-01T18:00:00"
+      },
+      {
+        startTime: "2025-03-02T15:30:00",
+        endTime: "2025-03-02T17:30:00"
+      }
+    ],
+    h3Resolution: zoom,
+    radiusMeters: radiusMeters,
+    minStayMinutes: minStayMinutes
+  }; 
+  const response = await fetchHeatmapEventParticipant('http://localhost:8080/api/v1/live-event/analysis', requestParam);
+  return response;
 };
 
 export default getHeatmapData;

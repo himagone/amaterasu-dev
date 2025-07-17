@@ -15,7 +15,7 @@ const AVAILABLE_DATES = [
 ];
 
 // 時間スロットの型定義
-type TimeSlot = {
+export type TimeSlot = {
   date: Date;
   dateIndex: number;
   hour: number;
@@ -46,330 +46,199 @@ const generateTimeSlots = (): TimeSlot[] => {
 
 type Props = {
   onDateRangeSelect: (start: Date, end: Date) => void;
-  fetchTimeseriesData: () => Promise<void>;
+  fetchEventParticipantData: (start: Date, end: Date) => Promise<void>;
   onTimeseriesDataUpdate?: (timeseriesData: {timestamp: string, points: any[]}[]) => void;
   onPlayStateChange?: (isPlaying: boolean, currentFrameIndex: number) => void;
   timeseriesData?: {timestamp: string, points: any[]}[];
-  isLoading?: boolean;
+  isLoading?: boolean; // can be removed if not used externally
 };
 
-function TimeRangeSlider(props: Props) {
+function TimeRangeSlider({
+  onDateRangeSelect,
+  fetchEventParticipantData,
+  onTimeseriesDataUpdate,
+  onPlayStateChange,
+  timeseriesData = [],
+  isLoading = false,
+}: Props) {
   const [timeSlots] = useState(generateTimeSlots());
-  const [sliderValue, setSliderValue] = useState<number[]>([8000, 9000]); // 最初の日の15:00-16:00
-  const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [currentFrameIndex, setCurrentFrameIndex] = useState<number>(0);
-  const [playbackSpeed, setPlaybackSpeed] = useState<number>(1000); // 1秒間隔
-  const timelineRef = useRef<HTMLDivElement>(null);
+  const [sliderValue, setSliderValue] = useState<number[]>([8000, 9000]);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
+  const [playbackSpeed] = useState(1000);
+  const [loadingData, setLoadingData] = useState(false);
   const playbackIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  // 外部から渡されるtimeseriesDataを使用
-  const timeseriesData = props.timeseriesData || [];
 
   // デバッグ: timeseriesDataの変化を監視
   useEffect(() => {
-    console.log('🎬 TimeRangeSlider: timeseriesDataが更新されました:', {
-      データ件数: timeseriesData.length,
-      isLoading: props.isLoading,
-      再生ボタン有効: !(props.isLoading || timeseriesData.length === 0),
-      timeseriesData: timeseriesData
+    console.log('🎬 TimeRangeSlider: timeseriesData updated', {
+      length: timeseriesData.length,
+      isLoading,
     });
-  }, [timeseriesData, props.isLoading]);
+  }, [timeseriesData, isLoading]);
 
-  // timeseriesDataが更新され、ローディングが完了した時に自動的に再生を開始
-  const [shouldAutoPlay, setShouldAutoPlay] = useState<boolean>(false);
-
+  // ミューテート安全: コンポーネントアンマウント時にタイマークリア
   useEffect(() => {
-    if (shouldAutoPlay && !props.isLoading && timeseriesData.length > 0 && !isPlaying) {
-      console.log('🎬 Auto-starting playback after data load');
-      setShouldAutoPlay(false);
-      
-      setIsPlaying(true);
-      setCurrentFrameIndex(0);
-      
-      playbackIntervalRef.current = setInterval(() => {
-        setCurrentFrameIndex((prevIndex) => {
-          const nextIndex = (prevIndex + 1) % timeseriesData.length;
-          
-          // 親コンポーネントに再生状態を通知
-          if (props.onPlayStateChange) {
-            props.onPlayStateChange(true, nextIndex);
-          }
-          
-          return nextIndex;
-        });
-      }, playbackSpeed);
-    }
-  }, [shouldAutoPlay, props.isLoading, timeseriesData.length, isPlaying, playbackSpeed, props.onPlayStateChange]);
+    return () => {
+      if (playbackIntervalRef.current) clearInterval(playbackIntervalRef.current);
+    };
+  }, []);
 
-  // スロットインデックスを時間形式に変換する関数
+  // スロットを日本語でフォーマット
+  const getJapaneseWeekday = (date: Date) => ['日','月','火','水','木','金','土'][date.getDay()];
   const formatTimeLabel = (value: number) => {
     const slot = timeSlots[value];
-    if (!slot) return '';
     const date = AVAILABLE_DATES[slot.dateIndex];
-    const weekday = getJapaneseWeekday(date);
-    return `${date.getMonth() + 1}/${date.getDate()}(${weekday}) ${slot.displayLabel}`;
+    return `${date.getMonth() + 1}/${date.getDate()}(${getJapaneseWeekday(date)}) ${slot.displayLabel}`;
   };
 
-  // 曜日を取得
-  const getJapaneseWeekday = (date: Date): string => {
-    const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
-    return weekdays[date.getDay()];
-  };
-
-  // 時間範囲の変更処理
-  const handleSliderChange = (event: Event, newValue: number | number[]) => {
-    if (Array.isArray(newValue)) {
-      setSliderValue(newValue);
-    }
-  };
-
-  // スライダーの操作が完了したときの処理
-  const handleSliderChangeCommitted = (event: Event | React.SyntheticEvent, newValue: number | number[]) => {
-    if (Array.isArray(newValue)) {
-      updateDateRange(newValue[0], newValue[1]);
-    }
-  };
-
-  // 日付時間範囲をDateオブジェクトに変換して親に通知
   const updateDateRange = (startIdx: number, endIdx: number) => {
-    const startDate = new Date(timeSlots[startIdx].date);
-    const endDate = new Date(timeSlots[endIdx].date);
-    
-    props.onDateRangeSelect(startDate, endDate);
+    const start = timeSlots[startIdx].date;
+    const end = timeSlots[endIdx].date;
+    onDateRangeSelect(start, end);
   };
 
-  // 再生/停止トグル
-  const togglePlay = async () => {
+  // スライダー操作
+  const handleSliderChange = (_: Event, newValue: number | number[]) => {
+    if (Array.isArray(newValue)) setSliderValue(newValue);
+  };
+
+  const handleSliderChangeCommitted = async (_: any, newValue: number | number[]) => {
+    if (!Array.isArray(newValue)) return;
+    const start = timeSlots[newValue[0]].date;
+    const end = timeSlots[newValue[1]].date;
+    onDateRangeSelect(start, end);
+    try {
+      setLoadingData(true);
+      await fetchEventParticipantData(start, end);
+    } catch (e) {
+      console.error('Error fetching data', e);
+      onTimeseriesDataUpdate?.([]);
+    } finally {
+      setLoadingData(false);
+    }
+  };
+
+  // 再生/停止
+  const togglePlay = () => {
     if (isPlaying) {
       stopPlayback();
     } else {
-      await startPlayback();
+      startPlayback();
     }
   };
 
-  // 再生開始
   const startPlayback = async () => {
-    // timeseriesデータがない場合は先にデータを取得
     if (timeseriesData.length === 0) {
+      setLoadingData(true);
+      const start = timeSlots[sliderValue[0]].date;
+      const end = timeSlots[sliderValue[1]].date;
       try {
-        setShouldAutoPlay(true); // データ取得後に自動再生するフラグを設定
-        await props.fetchTimeseriesData();
-        // fetchTimeseriesDataが完了した後、useEffectで自動再生される
-        return;
-      } catch (error) {
-        console.error('Failed to fetch timeseries data:', error);
-        setShouldAutoPlay(false); // エラー時はフラグをリセット
-        return;
+        await fetchEventParticipantData(start, end);
+        setIsPlaying(true);
+        setCurrentFrameIndex(0);
+        playbackIntervalRef.current = setInterval(() => {
+          setCurrentFrameIndex(prev => {
+            const next = (prev + 1) % timeseriesData.length;
+            onPlayStateChange?.(true, next);
+            return next;
+          });
+        }, playbackSpeed);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setLoadingData(false);
       }
+      return;
     }
-    
-    // データが既にある場合は即座に再生開始
+
     setIsPlaying(true);
     setCurrentFrameIndex(0);
-    
     playbackIntervalRef.current = setInterval(() => {
-      setCurrentFrameIndex((prevIndex) => {
-        const nextIndex = (prevIndex + 1) % timeseriesData.length;
-        
-        // 親コンポーネントに再生状態を通知
-        if (props.onPlayStateChange) {
-          props.onPlayStateChange(true, nextIndex);
-        }
-        
-        return nextIndex;
+      setCurrentFrameIndex(prev => {
+        const next = (prev + 1) % timeseriesData.length;
+        onPlayStateChange?.(true, next);
+        return next;
       });
     }, playbackSpeed);
   };
 
-  // 再生停止
   const stopPlayback = () => {
     setIsPlaying(false);
-    if (playbackIntervalRef.current) {
-      clearInterval(playbackIntervalRef.current);
-      playbackIntervalRef.current = null;
-    }
-    
-    if (props.onPlayStateChange) {
-      props.onPlayStateChange(false, currentFrameIndex);
-    }
+    if (playbackIntervalRef.current) clearInterval(playbackIntervalRef.current);
+    onPlayStateChange?.(false, currentFrameIndex);
   };
 
-  // コンポーネントがアンマウントされた時にタイマーをクリア
-  useEffect(() => {
-    return () => {
-      if (playbackIntervalRef.current) {
-        clearInterval(playbackIntervalRef.current);
-      }
-    };
-  }, []);
-
-
-  // 選択範囲の表示テキスト
+  // 選択表示テキスト
   const getSelectionText = () => {
-    const startSlot = timeSlots[sliderValue[0]];
-    const endSlot = timeSlots[sliderValue[1]];
-    const startDate = AVAILABLE_DATES[startSlot.dateIndex];
-    const endDate = AVAILABLE_DATES[endSlot.dateIndex];
-    
+    const [startIdx, endIdx] = sliderValue;
+    const startSlot = timeSlots[startIdx];
+    const endSlot = timeSlots[endIdx];
+    const sDate = AVAILABLE_DATES[startSlot.dateIndex];
+    const eDate = AVAILABLE_DATES[endSlot.dateIndex];
     if (startSlot.dateIndex === endSlot.dateIndex) {
-      // 同じ日の場合
-      return `${startDate.getMonth() + 1}/${startDate.getDate()}(${getJapaneseWeekday(startDate)}) ${startSlot.displayLabel} - ${endSlot.displayLabel}`;
-    } else {
-      return `${startDate.getMonth() + 1}/${startDate.getDate()}(${getJapaneseWeekday(startDate)}) ${startSlot.displayLabel} - ${endDate.getMonth() + 1}/${endDate.getDate()}(${getJapaneseWeekday(endDate)}) ${endSlot.displayLabel}`;
+      return `${sDate.getMonth()+1}/${sDate.getDate()}(${getJapaneseWeekday(sDate)}) ${startSlot.displayLabel} - ${endSlot.displayLabel}`;
     }
+    return `${sDate.getMonth()+1}/${sDate.getDate()}(${getJapaneseWeekday(sDate)}) ${startSlot.displayLabel} - ${eDate.getMonth()+1}/${eDate.getDate()}(${getJapaneseWeekday(eDate)}) ${endSlot.displayLabel}`;
   };
 
-
-  // 初期値設定
-  useEffect(() => {
-    updateDateRange(sliderValue[0], sliderValue[1]);
-  }, []);
-
-  // 選択範囲のスタイル計算
-  const getSelectionStyle = () => {
-    const totalSlots = timeSlots.length;
-    const startPercent = (sliderValue[0] / totalSlots) * 100;
-    const endPercent = (sliderValue[1] / totalSlots) * 100;
-    
-    return {
-      left: `${startPercent}%`,
-      width: `${endPercent - startPercent}%`
-    };
-  };
-
-  // 現在再生中の位置を計算
+  // 再生位置インジケーター計算
   const getCurrentPlaybackPosition = () => {
-    if (!isPlaying || timeseriesData.length === 0 || currentFrameIndex >= timeseriesData.length) {
-      return null;
-    }
-
-    const currentFrame = timeseriesData[currentFrameIndex];
-    const currentTimestamp = new Date(currentFrame.timestamp);
-    
-    // 選択範囲内での相対位置を計算（0-100%）
-    const totalFrames = timeseriesData.length;
-    const relativePosition = (currentFrameIndex / (totalFrames - 1)) * 100;
-    
-    // 選択範囲の幅を取得
-    const selectionStyle = getSelectionStyle();
-    const selectionStartPercent = parseFloat(selectionStyle.left.replace('%', ''));
-    const selectionWidthPercent = parseFloat(selectionStyle.width.replace('%', ''));
-    
-    // 選択範囲内での絶対位置を計算
-    const absolutePosition = selectionStartPercent + (relativePosition / 100) * selectionWidthPercent;
-    
-    return {
-      position: absolutePosition,
-      time: currentTimestamp.toLocaleString('ja-JP', { 
-        month: 'numeric', 
-        day: 'numeric',
-        hour: '2-digit', 
-        minute: '2-digit' 
-      }),
-      weekday: getJapaneseWeekday(currentTimestamp)
-    };
+    if (!isPlaying || timeseriesData.length === 0) return null;
+    const positionPercent = (currentFrameIndex / (timeseriesData.length - 1)) * 100;
+    const leftBase = (sliderValue[0] / timeSlots.length) * 100;
+    const width = ((sliderValue[1] - sliderValue[0]) / timeSlots.length) * 100;
+    const absolute = leftBase + (positionPercent/100)*width;
+    const ts = new Date(timeseriesData[currentFrameIndex].timestamp);
+    return { position: absolute, label: `${getJapaneseWeekday(ts)} ${ts.getHours()}:${ts.getMinutes().toString().padStart(2, '0')}` };
   };
 
   return (
     <div className="windy-time-slider">
-      {/* 選択範囲表示 */}
       <div className="selection-indicator">
         <span className="selection-text">{getSelectionText()}</span>
       </div>
-
-      {/* メインタイムライン */}
-      <div className="timeline-container" ref={timelineRef}>
-        {/* 再生ボタン */}
-        <button 
-          className={`play-button ${isPlaying ? 'playing' : ''} ${props.isLoading ? 'loading' : ''}`}
+      <div className="timeline-container">
+        <button
+          className={`play-button ${isPlaying ? 'playing' : ''} ${loadingData ? 'loading' : ''}`}
           onClick={togglePlay}
-          disabled={props.isLoading}
-          title={props.isLoading ? 'データを読み込み中...' : (isPlaying ? '再生を停止' : '再生を開始')}
+          disabled={loadingData}
+          title={loadingData ? 'データを読み込み中...' : (isPlaying ? '再生を停止' : '再生を開始')}
         >
-          {props.isLoading ? (
-            <div className="loading-spinner"></div>
-          ) : (
-            isPlaying ? '⏸' : '▷'
-          )}
+          {loadingData ? <div className="loading-spinner"/> : (isPlaying ? '⏸' : '▷')}
         </button>
-        {/* タイムライン */}
         <div className="timeline">
-          {/* 背景バー */}
-          <div className="timeline-track"></div>
-          
-          {/* 選択範囲の強調表示 */}
-          <div 
-            className="selection-range" 
-            style={getSelectionStyle()}
-          ></div>
-
-          {/* 現在再生中の位置インジケーター */}
-          {(() => {
-            const playbackPosition = getCurrentPlaybackPosition();
-            if (!playbackPosition) return null;
-            
-            return (
-              <div 
-                className="playback-position-indicator"
-                style={{ left: `${playbackPosition.position}%` }}
-              >
-                <div className="playback-needle"></div>
-                <div className="playback-tooltip">
-                  <div className="current-time">
-                    {playbackPosition.weekday} {playbackPosition.time}
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-
-          {/* レンジスライダー */}
+          <div className="timeline-track" />
+          <div className="selection-range" style={{ left: `${(sliderValue[0]/timeSlots.length)*100}%`, width: `${((sliderValue[1]-sliderValue[0])/timeSlots.length)*100}%` }} />
+          {getCurrentPlaybackPosition() && (
+            <div className="playback-position-indicator" style={{ left: `${getCurrentPlaybackPosition()!.position}%` }}>
+              <div className="playback-needle" />
+              <div className="playback-tooltip">{getCurrentPlaybackPosition()!.label}</div>
+            </div>
+          )}
           <Slider
-            getAriaLabel={() => 'Time range'}
             value={sliderValue}
             onChange={handleSliderChange}
             onChangeCommitted={handleSliderChangeCommitted}
             valueLabelDisplay="auto"
             min={0}
             max={timeSlots.length - 1}
-            disabled={props.isLoading || isPlaying}
-            className="range-slider"
-            getAriaValueText={(value) => {
-              const slot = timeSlots[value];
-              if (!slot) return '';
-              const date = AVAILABLE_DATES[slot.dateIndex];
-              const weekday = getJapaneseWeekday(date);
-              return `${date.getMonth() + 1}/${date.getDate()}(${weekday}) ${slot.displayLabel}`;
-            }}
+            disabled={isPlaying || loadingData}
             valueLabelFormat={formatTimeLabel}
-            marks={false}
             step={1}
-            track="normal"
             disableSwap
+            track="normal"
           />
-
-          {/* 時間目盛り */}
           <div className="time-markers">
-            {AVAILABLE_DATES.map((date, dateIndex) => (
-              <div key={dateIndex} className="date-group">
-                {/* 日付ラベル */}
+            {AVAILABLE_DATES.map((date, idx) => (
+              <div key={idx} className="date-group">
                 <div className="date-label">
-                  <div className="month-day">
-                    {date.getMonth() + 1}/{date.getDate()}
-                  </div>
-                  <div className="weekday">
-                    {getJapaneseWeekday(date)}
-                  </div>
+                  <div className="month-day">{date.getMonth()+1}/{date.getDate()}</div>
+                  <div className="weekday">{getJapaneseWeekday(date)}</div>
                 </div>
-                {/* 時間目盛り */}
                 <div className="hour-markers">
-                  {Array.from({ length: 24 }, (_, hour) => (
-                    <div 
-                      key={hour} 
-                      className={`hour-marker ${hour % 6 === 0 ? 'major' : ''}`}
-                    >
-                      {hour % 12 === 0 && <span>{hour}:00</span>}
-                    </div>
+                  {Array.from({ length: 24 }).map((_, h) => (
+                    <div key={h} className={`hour-marker ${h%6===0?'major':''}`}>{h%12===0 && <span>{h}:00</span>}</div>
                   ))}
                 </div>
               </div>
@@ -378,7 +247,7 @@ function TimeRangeSlider(props: Props) {
         </div>
       </div>
     </div>
-  );
+  )
 }
 
-export default TimeRangeSlider; 
+export default TimeRangeSlider;

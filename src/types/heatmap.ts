@@ -1,6 +1,3 @@
-import { GeoBoundingBox } from "@deck.gl/geo-layers";
-import { BitmapBoundingBox } from "@deck.gl/layers";
-
 export interface heatmapResponse {
   timestamp: string,
   resolution: string,
@@ -58,6 +55,53 @@ export interface heatmapTimeseriesRequestParam {
   zoom: number,
   intervalMinutes: number,
   activityTypes?: string[]
+}
+
+export interface heatmapEventParticipantRequestParam {
+  analysisStartTime: string,
+  analysisEndTime: string,
+  venueLat: 34.35370012,
+  venueLng: 134.0459301,
+  eventTimeSlots: Array<{
+    startTime: string,
+    endTime: string
+  }>,
+  h3Resolution: number,
+  radiusMeters: number,
+  minStayMinutes: number
+}
+
+export interface heatmapEventParticipantResponse {
+  participantSummary: ParticipantSummary,
+  cells: Array<eventParticipanth3Cells>
+}
+export interface ParticipantSummary{
+  totalParticipants: number;
+  totalEventTimeSlots: number;
+  venueLat: number;
+  venueLng: number;
+  radiusMeters: number;
+  analysisStartTime: string;
+  analysisEndTime: string;
+  demographics: demographics;
+}
+export interface eventParticipanth3Cells{
+  h3Index: string;
+  count: number;
+  lat: number;
+  lng: number;
+  avgStayMinutes: number;
+  dominantActivityType: string;
+}
+interface demographics {
+  /** 性別ごとの件数 e.g. { "男性": 8, "女性": 6 } */
+  sexDistribution: Record<string, number>;
+  /** 年代グループごとの件数 e.g. { "20-29": 1, ... } */
+  ageGroups: Record<string, number>;
+  /** 職業カテゴリごとの件数 */
+  jobCategories: Record<string, number>;
+  /** 交通手段ごとの件数 */
+  transportationMethods: Record<string, number>;
 }
 
 export interface pointsRequestParam {

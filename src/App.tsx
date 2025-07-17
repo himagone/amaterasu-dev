@@ -5,41 +5,17 @@ import './App.css'
 import Weather from './components/Weather.tsx'
 import { MapboxOverlay } from '@deck.gl/mapbox';
 import { H3HexagonLayer } from '@deck.gl/geo-layers';
-import { ScatterplotLayer, IconLayer } from '@deck.gl/layers';
-import {Deck, PickingInfo} from '@deck.gl/core';
+import { ScatterplotLayer } from '@deck.gl/layers';
 import TimeRangeSlider from './components/TimeRangeSlider'
 import LayerControls from './components/LayerControls'
 import MarketingInsights from './components/MarketingInsights'
-import TransportationModeSelector from './components/TransportationModeSelector'
-import getHeatmapData from './utils/getHeatmap'
-import { getHeatmapTimeseriesData } from './utils/getHeatmap'
-import { heatmapPoints } from './types/heatmap'
-import { createHeatmapLayer, COLOR_SCHEMES } from './utils/createHeatmapLayer'
+import { getHeatmapData, getHeatmapTimeseriesData, getHeatmapEventParticipant } from './utils/getHeatmap'
+import { heatmapPoints, eventParticipanth3Cells, ParticipantSummary } from './types/heatmap'
 import getDemographicData from './utils/getDemographicData'
 import { DemographicFilters, DemographicPoint } from './types/demographicData'
-
-// UXフローの段階を定義
-enum UXPhase {
-  DATE_SELECTION = 'date_selection',
-  ANALYSIS = 'analysis'
-}
-
-// 必要な型とデフォルト値を定義
-type LocationData = any;
-type PersonCountRange = any;
-
-// H3ヒートマップデータの型定義
-type H3HeatmapData = {
-  h3_index: string;
-  person_count: number;
-  time: string;
-  lat: number;
-  lng: number;
-};
+import { TryRounded } from '@mui/icons-material'
 
 function App() {
-  // UXフローの状態管理
-  const [currentPhase, setCurrentPhase] = useState<UXPhase>(UXPhase.ANALYSIS);
   // デフォルトの時間範囲を設定（過去24時間のデータ）
   const defaultEndDate = new Date('2025-02-23T18:00:00');
   const defaultStartDate = new Date('2025-02-23T14:00:00');
@@ -48,15 +24,10 @@ function App() {
     end: defaultEndDate
   });
 
-  const [layers, setLayers] = useState<any[]>([]);
-  const [locationData, setLocationData] = useState<LocationData[]>([]);
-  const [personCount, setPersonCount] = useState<PersonCountRange>({ min: 0, max: 0 });
   const [currentDate, setCurrentDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [selectedDateTime, setSelectedDateTime] = useState<Date>(new Date());
-  const [availableTimes, setAvailableTimes] = useState<Set<string>>(new Set());
   const [currentZoom, setCurrentZoom] = useState<number>(10);
-  const [showHeatmapLayer, setShowHeatmapLayer] = useState<boolean>(true); // デフォルトでヒートマップレイヤーを有効にする
-  const [showH3Layer, setShowH3Layer] = useState<boolean>(false);
+  const [showHeatmapLayer, setShowHeatmapLayer] = useState<boolean>(true);
   const [heatmapData, setHeatmapData] = useState<heatmapPoints[]>([]);
   const [mapInstance, setMapInstance] = useState<any>(null);
   const mapInstanceRef = useRef<any>(null);
@@ -67,6 +38,11 @@ function App() {
   const [isTimeseriesMode, setIsTimeseriesMode] = useState<boolean>(false);
   const [isPlaybackActive, setIsPlaybackActive] = useState<boolean>(false);
   const [isTimeseriesLoading, setIsTimeseriesLoading] = useState<boolean>(false);
+
+  const [eventParticipantData, setEventParticipantData] = useState<eventParticipanth3Cells[]>([]);
+  const [participantSummary, setParticipantSummary] = useState<ParticipantSummary | null>(null);
+
+
   // デバウンス用のタイマーRef
   const zoomDebounceTimer = useRef<NodeJS.Timeout | null>(null);
   const dateRangeDebounceTimer = useRef<NodeJS.Timeout | null>(null);
@@ -109,7 +85,6 @@ function App() {
 
   const [isHeatmapLoading, setIsHeatmapLoading] = useState<boolean>(false);
   const [heatmapError, setHeatmapError] = useState<string | null>(null);
-  const [manualFetchHeatmap, setManualFetchHeatmap] = useState<(() => void) | null>(null);
 
   // 人口統計フィルター関連のstate
   const [demographicFilters, setDemographicFilters] = useState<DemographicFilters>({
@@ -175,25 +150,9 @@ function App() {
     }
   }, [currentZoom, showHeatmapLayer, dateRange, mapInstance, selectedActivityTypes, isPlaybackActive]); // isPlaybackActiveも監視に追加
 
-      const handleHeatmapDataUpdate = (data: heatmapPoints[]) => {
+    const handleHeatmapDataUpdate = (data: heatmapPoints[]) => {
       setHeatmapData(data);
-      
-      if (data.length > 0) {
-        const values = data.map(d => d.value || d.intensity || 1);
-        console.log('Value range:', {
-          min: Math.min(...values),
-          max: Math.max(...values)
-        });
-      }
     };
-
-  const handleHeatmapLoadingStateChange = (isLoading: boolean) => {
-    setIsHeatmapLoading(isLoading);
-  };
-
-  const handleHeatmapErrorStateChange = (error: string | null) => {
-    setHeatmapError(error);
-  };
 
   // タイムシリーズデータの更新処理
   const handleTimeseriesDataUpdate = (data: {timestamp: string, points: heatmapPoints[]}[]) => {
@@ -333,6 +292,28 @@ function App() {
       layerList.push(heatmapLayer);
     }
 
+    if (eventParticipantData.length > 0) {
+      const maxCount = Math.max(...eventParticipantData.map(cell => cell.count));
+      const eventLayer = new H3HexagonLayer({
+        id: 'event-participant-heatmap',
+        data: eventParticipantData,
+        getHexagon: (d: eventParticipanth3Cells) => d.h3Index,
+        getFillColor: (d: eventParticipanth3Cells) => {
+          const value = d.count || 0;
+          const intensity = (value / maxCount) * 255; // 最大値に基づく強度計算
+          return [255, 0, 0, intensity]; // 赤色で強度を表現
+        },
+        getLineColor: [255, 255, 255, 200], // 白い枠線
+        getLineWidth: 1,
+        stroked: true,
+        filled: true,
+        extruded: false,
+        opacity: 0.6,
+        pickable: true
+      });
+      layerList.push(eventLayer);
+    }
+
     // 人口統計フィルター用スキャッタープロットレイヤー
     if (showDemographicLayer && demographicPointData.length > 0) {
 
@@ -364,7 +345,7 @@ function App() {
     }
 
     return layerList;
-     }, [showHeatmapLayer, heatmapData, showDemographicLayer, demographicPointData, selectedDateTime]);
+     }, [showHeatmapLayer, heatmapData, eventParticipantData, showDemographicLayer, demographicPointData, selectedDateTime]);
 
   // Deck.glオーバーレイの作成
   const deckOverlay = useMemo(() => {
@@ -415,7 +396,7 @@ function App() {
                 <div style="padding: 8px; background: rgba(0,0,0,0.8); color: white; border-radius: 4px;">
                   <div style="font-weight: bold; color: #ff9800; margin-bottom: 4px;">📊 密度ヒートマップ</div>
                   <div><strong>H3インデックス:</strong> ${info.object.h3_index}</div>
-                  <div><strong>人数:</strong> ${info.object.person_count}</div>
+                  <div><strong>人数:</strong> ${info.object.person_count || info.object.count}</div>
                   <div><strong>時刻:</strong> ${new Date(info.object.time).toLocaleString('ja-JP')}</div>
                   <div><strong>位置:</strong> ${info.object.lat?.toFixed(6)}, ${info.object.lng?.toFixed(6)}</div>
                 </div>
@@ -433,7 +414,8 @@ function App() {
               html: `
                 <div style="padding: 8px; background: rgba(0,0,0,0.8); color: white; border-radius: 4px;">
                   <div style="font-weight: bold; color: #667eea; margin-bottom: 4px;">📍 データポイント</div>
-                  <div><strong>人数:</strong> ${info.object.value || info.object.intensity || 0}人</div>
+                  <div><strong>人数:</strong> ${info.object.value || info.object.intensity || info.object.count}人</div>
+                  
                   <div><strong>位置:</strong> ${info.object.lat?.toFixed(4)}, ${info.object.lng?.toFixed(4)}</div>
                 </div>
               `,
@@ -468,7 +450,6 @@ function App() {
   // 再生ボタンが押された時の処理（タイムシリーズデータを取得）
   const fetchTimeseriesData = async () => {
     setIsTimeseriesLoading(true);
-    
     // 地図の表示範囲を取得
     let bounds = null;
     const currentMapInstance = mapInstanceRef.current || mapInstance;
@@ -485,7 +466,6 @@ function App() {
         console.warn('Failed to get map bounds:', error);
       }
     }
-    
     try {
       // タイムシリーズデータを取得（1分間隔）
       const timeseriesData = await getHeatmapTimeseriesData(
@@ -507,6 +487,35 @@ function App() {
       setHeatmapError(error instanceof Error ? error.message : 'Unknown error');
     } finally {
       setIsTimeseriesLoading(false);
+    }
+  };
+
+  // 穴吹アリーナにイベント期間中滞在した人のヒートマップデータを取得
+  const fetchEventParticipantData = async (start: Date, end: Date) => {
+    setIsTimeseriesLoading(true);
+    try {
+      const { participantSummary, cells } = await getHeatmapEventParticipant(
+        start,
+        end,
+        10, // ズームレベル
+        200, // 半径200m
+        30 // 滞在時間30分
+      );
+      setParticipantSummary(participantSummary);
+      setEventParticipantData(cells);
+      setHeatmapData(cells.map(cell => ({
+        h3Index: cell.h3Index,
+        value: cell.count,
+        intensity: cell.count, // Add the required intensity property
+        lat: cell.lat,
+        lng: cell.lng,
+        time: ''
+      })));
+    } catch (error) {
+      console.error('Error fetching event participant data:', error);
+      setHeatmapError(error instanceof Error ? error.message : 'イベント参加者データの取得に失敗しました');
+    } finally {
+      setIsHeatmapLoading(false);
     }
   };
 
@@ -557,7 +566,8 @@ function App() {
           {/* タイムスライダー */}
           <TimeRangeSlider 
             onDateRangeSelect={handleDateRangeSelect}
-            fetchTimeseriesData={fetchTimeseriesData}
+            //fetchTimeseriesData={fetchTimeseriesData}
+            fetchEventParticipantData={fetchEventParticipantData}
             onTimeseriesDataUpdate={handleTimeseriesDataUpdate}
             onPlayStateChange={handlePlayStateChange}
             timeseriesData={timeseriesData}
