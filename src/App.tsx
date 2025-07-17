@@ -415,7 +415,7 @@ function App() {
                 <div style="padding: 8px; background: rgba(0,0,0,0.8); color: white; border-radius: 4px;">
                   <div style="font-weight: bold; color: #667eea; margin-bottom: 4px;">📍 データポイント</div>
                   <div><strong>人数:</strong> ${info.object.value || info.object.intensity || info.object.count}人</div>
-                  
+
                   <div><strong>位置:</strong> ${info.object.lat?.toFixed(4)}, ${info.object.lng?.toFixed(4)}</div>
                 </div>
               `,
@@ -497,7 +497,7 @@ function App() {
       const { participantSummary, cells } = await getHeatmapEventParticipant(
         start,
         end,
-        10, // ズームレベル
+        currentZoom, // ズームレベル
         200, // 半径200m
         30 // 滞在時間30分
       );
