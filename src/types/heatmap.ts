@@ -66,9 +66,9 @@ export interface heatmapEventParticipantRequestParam {
     startTime: string,
     endTime: string
   }>,
-  h3Resolution: number,
+  zoom: number,
   radiusMeters: number,
-  minStayMinutes: number
+  minStillCount: number
 }
 
 export interface heatmapEventParticipantResponse {

@@ -166,27 +166,23 @@ export const getHeatmapEventParticipant = async (
   startDate: Date,
   endDate: Date,
   zoom: number,
-  radiusMeters: number = 200, // 半径デフォルト200m
-  minStayMinutes: number = 30, // 滞在時間デフォルト30min
+  radiusMeters: number = 100, // 半径デフォルト200m
+  minStillCount: number = 10, // stillの最小カウントデフォルト3
 ): Promise<heatmapEventParticipantResponse> => {
   const requestParam: heatmapEventParticipantRequestParam = {
     analysisStartTime: formatDateTime(startDate),
     analysisEndTime: formatDateTime(endDate),
-    venueLat: 34.35370012, // 穴吹アリーナの緯度
-    venueLng: 134.0459301, // 穴吹アリーナの
+    venueLat: 34.35370012,
+    venueLng: 134.0459301,
     eventTimeSlots: [
       {
         startTime: "2025-03-01T16:00:00",
-        endTime: "2025-03-01T18:00:00"
-      },
-      {
-        startTime: "2025-03-02T15:30:00",
-        endTime: "2025-03-02T17:30:00"
+        endTime: "2025-03-01T17:00:00"
       }
     ],
-    h3Resolution: zoom,
+    zoom: zoom,
     radiusMeters: radiusMeters,
-    minStayMinutes: minStayMinutes
+    minStillCount: minStillCount
   }; 
   const response = await fetchHeatmapEventParticipant('http://localhost:8080/api/v1/live-event/analysis', requestParam);
   return response;

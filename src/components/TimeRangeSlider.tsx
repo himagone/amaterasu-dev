@@ -232,14 +232,14 @@ function TimeRangeSlider({
           <div className="time-markers">
             {AVAILABLE_DATES.map((date, idx) => (
               <div key={idx} className="date-group">
-                <div className="date-label">
-                  <div className="month-day">{date.getMonth()+1}/{date.getDate()}</div>
-                  <div className="weekday">{getJapaneseWeekday(date)}</div>
-                </div>
                 <div className="hour-markers">
                   {Array.from({ length: 24 }).map((_, h) => (
                     <div key={h} className={`hour-marker ${h%6===0?'major':''}`}>{h%12===0 && <span>{h}:00</span>}</div>
                   ))}
+                </div>
+                <div className="date-label">
+                  <div className="month-day">{date.getMonth()+1}/{date.getDate()}</div>
+                  <div className="weekday">{getJapaneseWeekday(date)}</div>
                 </div>
               </div>
             ))}
