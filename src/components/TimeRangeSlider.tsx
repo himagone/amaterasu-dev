@@ -2,13 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { Slider } from '@mui/material'
 import './TimeRangeSlider.css'
 
-// 固定の8日間データ
+// 3日間のデータに絞る
 const AVAILABLE_DATES = [
-  new Date(2025, 1, 23), // 2025/02/23
-  new Date(2025, 1, 24), // 2025/02/24  
-  new Date(2025, 1, 25), // 2025/02/25
-  new Date(2025, 1, 26), // 2025/02/26
-  new Date(2025, 1, 27), // 2025/02/27
   new Date(2025, 1, 28), // 2025/02/28
   new Date(2025, 2, 1),  // 2025/03/01
   new Date(2025, 2, 2),  // 2025/03/02
@@ -62,7 +57,7 @@ function TimeRangeSlider({
   isLoading = false,
 }: Props) {
   const [timeSlots] = useState(generateTimeSlots());
-  const [sliderValue, setSliderValue] = useState<number[]>([8000, 9000]);
+  const [sliderValue, setSliderValue] = useState<number[]>([1440, 2880]); // 初期値を調整（2日目の0時から3日目の0時）
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
   const [playbackSpeed] = useState(1000);
@@ -92,11 +87,7 @@ function TimeRangeSlider({
     return `${date.getMonth() + 1}/${date.getDate()}(${getJapaneseWeekday(date)}) ${slot.displayLabel}`;
   };
 
-  const updateDateRange = (startIdx: number, endIdx: number) => {
-    const start = timeSlots[startIdx].date;
-    const end = timeSlots[endIdx].date;
-    onDateRangeSelect(start, end);
-  };
+
 
   // スライダー操作
   const handleSliderChange = (_: Event, newValue: number | number[]) => {
@@ -119,22 +110,37 @@ function TimeRangeSlider({
     }
   };
 
-  // 再生/停止
-  const togglePlay = () => {
+  // 再生ボタンの挙動をまとめる
+  const handlePlayButtonClick = async () => {
+    if (loadingData) return;
     if (isPlaying) {
-      stopPlayback();
+      // 停止
+      setIsPlaying(false);
+      if (playbackIntervalRef.current) clearInterval(playbackIntervalRef.current);
+      onPlayStateChange?.(false, currentFrameIndex);
     } else {
-      startPlayback();
-    }
-  };
-
-  const startPlayback = async () => {
-    if (timeseriesData.length === 0) {
-      setLoadingData(true);
-      const start = timeSlots[sliderValue[0]].date;
-      const end = timeSlots[sliderValue[1]].date;
-      try {
-        await fetchEventParticipantData(start, end);
+      // 再生
+      if (timeseriesData.length === 0) {
+        setLoadingData(true);
+        const start = timeSlots[sliderValue[0]].date;
+        const end = timeSlots[sliderValue[1]].date;
+        try {
+          await fetchEventParticipantData(start, end);
+          setIsPlaying(true);
+          setCurrentFrameIndex(0);
+          playbackIntervalRef.current = setInterval(() => {
+            setCurrentFrameIndex(prev => {
+              const next = (prev + 1) % timeseriesData.length;
+              onPlayStateChange?.(true, next);
+              return next;
+            });
+          }, playbackSpeed);
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setLoadingData(false);
+        }
+      } else {
         setIsPlaying(true);
         setCurrentFrameIndex(0);
         playbackIntervalRef.current = setInterval(() => {
@@ -144,29 +150,8 @@ function TimeRangeSlider({
             return next;
           });
         }, playbackSpeed);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoadingData(false);
       }
-      return;
     }
-
-    setIsPlaying(true);
-    setCurrentFrameIndex(0);
-    playbackIntervalRef.current = setInterval(() => {
-      setCurrentFrameIndex(prev => {
-        const next = (prev + 1) % timeseriesData.length;
-        onPlayStateChange?.(true, next);
-        return next;
-      });
-    }, playbackSpeed);
-  };
-
-  const stopPlayback = () => {
-    setIsPlaying(false);
-    if (playbackIntervalRef.current) clearInterval(playbackIntervalRef.current);
-    onPlayStateChange?.(false, currentFrameIndex);
   };
 
   // 選択表示テキスト
@@ -193,6 +178,31 @@ function TimeRangeSlider({
     return { position: absolute, label: `${getJapaneseWeekday(ts)} ${ts.getHours()}:${ts.getMinutes().toString().padStart(2, '0')}` };
   };
 
+  // イベント時間帯（開演から2時間半）を定義
+  const EVENT_PERIODS = [
+    {
+      // 3月1日(土) 17:00-19:30
+      start: new Date(2025, 2, 1, 17, 0, 0, 0),
+      end:   new Date(2025, 2, 1, 19, 30, 0, 0),
+    },
+    {
+      // 3月2日(日) 16:30-19:00
+      start: new Date(2025, 2, 2, 16, 30, 0, 0),
+      end:   new Date(2025, 2, 2, 19, 0, 0, 0),
+    }
+  ];
+
+  // 指定した日時がtimeSlotsの何番目かを返す
+  const findSlotIndex = (date: Date) => {
+    return timeSlots.findIndex(slot =>
+      slot.date.getFullYear() === date.getFullYear() &&
+      slot.date.getMonth() === date.getMonth() &&
+      slot.date.getDate() === date.getDate() &&
+      slot.hour === date.getHours() &&
+      slot.minute === date.getMinutes()
+    );
+  };
+
   return (
     <div className="windy-time-slider">
       <div className="selection-indicator">
@@ -201,7 +211,7 @@ function TimeRangeSlider({
       <div className="timeline-container">
         <button
           className={`play-button ${isPlaying ? 'playing' : ''} ${loadingData ? 'loading' : ''}`}
-          onClick={togglePlay}
+          onClick={handlePlayButtonClick}
           disabled={loadingData}
           title={loadingData ? 'データを読み込み中...' : (isPlaying ? '再生を停止' : '再生を開始')}
         >
@@ -209,6 +219,49 @@ function TimeRangeSlider({
         </button>
         <div className="timeline">
           <div className="timeline-track" />
+          {/* イベント時間帯のハイライト */}
+          {EVENT_PERIODS.map((period, idx) => {
+            const startIdx = findSlotIndex(period.start);
+            const endIdx = findSlotIndex(period.end);
+            if (startIdx === -1 || endIdx === -1) return null;
+            const left = (startIdx / timeSlots.length) * 100;
+            const width = ((endIdx - startIdx) / timeSlots.length) * 100;
+            return (
+              <div
+                key={idx}
+                className="event-range"
+                style={{
+                  left: `${left}%`,
+                  width: `${width}%`,
+                  position: 'absolute',
+                  top: 0,
+                  height: '100%',
+                  background: 'rgba(255, 193, 7, 0.25)', // 黄色系半透明
+                  borderRadius: 4,
+                  pointerEvents: 'none',
+                  zIndex: 1,
+                }}
+                title="イベント時間"
+              >
+                {/* イベント帯ラベル（中央に表示） */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '-1.5em',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    fontSize: '0.85em',
+                    color: '#b8860b',
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap',
+                    pointerEvents: 'none',
+                  }}
+                >
+                  LIVE開演中
+                </div>
+              </div>
+            );
+          })}
           <div className="selection-range" style={{ left: `${(sliderValue[0]/timeSlots.length)*100}%`, width: `${((sliderValue[1]-sliderValue[0])/timeSlots.length)*100}%` }} />
           {getCurrentPlaybackPosition() && (
             <div className="playback-position-indicator" style={{ left: `${getCurrentPlaybackPosition()!.position}%` }}>
