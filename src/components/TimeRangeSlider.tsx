@@ -41,7 +41,7 @@ const generateTimeSlots = (): TimeSlot[] => {
 
 type Props = {
   onDateRangeSelect: (start: Date, end: Date) => void;
-  fetchEventParticipantData: (start: Date, end: Date) => Promise<void>;
+  fetchEventParticipantData?: (start: Date, end: Date) => Promise<void>;
   onTimeseriesDataUpdate?: (timeseriesData: {timestamp: string, points: any[]}[]) => void;
   onPlayStateChange?: (isPlaying: boolean, currentFrameIndex: number) => void;
   timeseriesData?: {timestamp: string, points: any[]}[];
@@ -58,11 +58,7 @@ function TimeRangeSlider({
 }: Props) {
   const [timeSlots] = useState(generateTimeSlots());
   const [sliderValue, setSliderValue] = useState<number[]>([1440, 2880]); // 初期値を調整（2日目の0時から3日目の0時）
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentFrameIndex, setCurrentFrameIndex] = useState(0);
-  const [playbackSpeed] = useState(1000);
   const [loadingData, setLoadingData] = useState(false);
-  const playbackIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // デバッグ: timeseriesDataの変化を監視
   useEffect(() => {
@@ -75,7 +71,9 @@ function TimeRangeSlider({
   // ミューテート安全: コンポーネントアンマウント時にタイマークリア
   useEffect(() => {
     return () => {
-      if (playbackIntervalRef.current) clearInterval(playbackIntervalRef.current);
+      // 再生ボタンや再生状態に関するuseState, 関数, UI, props, useRef, useEffect, および関連ロジックを削除
+      // 例: isPlaying, currentFrameIndex, playbackSpeed, playbackIntervalRef, handlePlayButtonClick, getCurrentPlaybackPosition, onPlayStateChange など
+      // タイムラインの再生ボタン部分のJSXも削除
     };
   }, []);
 
@@ -99,60 +97,21 @@ function TimeRangeSlider({
     const start = timeSlots[newValue[0]].date;
     const end = timeSlots[newValue[1]].date;
     onDateRangeSelect(start, end);
-    try {
-      setLoadingData(true);
-      await fetchEventParticipantData(start, end);
-    } catch (e) {
-      console.error('Error fetching data', e);
-      onTimeseriesDataUpdate?.([]);
-    } finally {
-      setLoadingData(false);
-    }
-  };
-
-  // 再生ボタンの挙動をまとめる
-  const handlePlayButtonClick = async () => {
-    if (loadingData) return;
-    if (isPlaying) {
-      // 停止
-      setIsPlaying(false);
-      if (playbackIntervalRef.current) clearInterval(playbackIntervalRef.current);
-      onPlayStateChange?.(false, currentFrameIndex);
-    } else {
-      // 再生
-      if (timeseriesData.length === 0) {
+    if (fetchEventParticipantData) {
+      try {
         setLoadingData(true);
-        const start = timeSlots[sliderValue[0]].date;
-        const end = timeSlots[sliderValue[1]].date;
-        try {
-          await fetchEventParticipantData(start, end);
-          setIsPlaying(true);
-          setCurrentFrameIndex(0);
-          playbackIntervalRef.current = setInterval(() => {
-            setCurrentFrameIndex(prev => {
-              const next = (prev + 1) % timeseriesData.length;
-              onPlayStateChange?.(true, next);
-              return next;
-            });
-          }, playbackSpeed);
-        } catch (e) {
-          console.error(e);
-        } finally {
-          setLoadingData(false);
-        }
-      } else {
-        setIsPlaying(true);
-        setCurrentFrameIndex(0);
-        playbackIntervalRef.current = setInterval(() => {
-          setCurrentFrameIndex(prev => {
-            const next = (prev + 1) % timeseriesData.length;
-            onPlayStateChange?.(true, next);
-            return next;
-          });
-        }, playbackSpeed);
+        await fetchEventParticipantData(start, end);
+      } catch (e) {
+        console.error('Error fetching event participant data', e);
+      } finally {
+        setLoadingData(false);
       }
     }
   };
+
+  // 再生ボタンや再生状態に関するuseState, 関数, UI, props, useRef, useEffect, および関連ロジックを削除
+  // 例: isPlaying, currentFrameIndex, playbackSpeed, playbackIntervalRef, handlePlayButtonClick, getCurrentPlaybackPosition, onPlayStateChange など
+  // タイムラインの再生ボタン部分のJSXも削除
 
   // 選択表示テキスト
   const getSelectionText = () => {
@@ -169,12 +128,15 @@ function TimeRangeSlider({
 
   // 再生位置インジケーター計算
   const getCurrentPlaybackPosition = () => {
-    if (!isPlaying || timeseriesData.length === 0) return null;
-    const positionPercent = (currentFrameIndex / (timeseriesData.length - 1)) * 100;
+    // 再生ボタンや再生状態に関するuseState, 関数, UI, props, useRef, useEffect, および関連ロジックを削除
+    // 例: isPlaying, currentFrameIndex, playbackSpeed, playbackIntervalRef, handlePlayButtonClick, getCurrentPlaybackPosition, onPlayStateChange など
+    // タイムラインの再生ボタン部分のJSXも削除
+    if (timeseriesData.length === 0) return null;
+    const positionPercent = (0 / (timeseriesData.length - 1)) * 100; // 現在のフレームが0なので、0%
     const leftBase = (sliderValue[0] / timeSlots.length) * 100;
     const width = ((sliderValue[1] - sliderValue[0]) / timeSlots.length) * 100;
     const absolute = leftBase + (positionPercent/100)*width;
-    const ts = new Date(timeseriesData[currentFrameIndex].timestamp);
+    const ts = new Date(timeseriesData[0].timestamp); // 現在のフレームは0なので、timeseriesData[0]を使用
     return { position: absolute, label: `${getJapaneseWeekday(ts)} ${ts.getHours()}:${ts.getMinutes().toString().padStart(2, '0')}` };
   };
 
@@ -209,14 +171,9 @@ function TimeRangeSlider({
         <span className="selection-text">{getSelectionText()}</span>
       </div>
       <div className="timeline-container">
-        <button
-          className={`play-button ${isPlaying ? 'playing' : ''} ${loadingData ? 'loading' : ''}`}
-          onClick={handlePlayButtonClick}
-          disabled={loadingData}
-          title={loadingData ? 'データを読み込み中...' : (isPlaying ? '再生を停止' : '再生を開始')}
-        >
-          {loadingData ? <div className="loading-spinner"/> : (isPlaying ? '⏸' : '▷')}
-        </button>
+        {/* 再生ボタンや再生状態に関するuseState, 関数, UI, props, useRef, useEffect, および関連ロジックを削除
+        // 例: isPlaying, currentFrameIndex, playbackSpeed, playbackIntervalRef, handlePlayButtonClick, getCurrentPlaybackPosition, onPlayStateChange など
+        // タイムラインの再生ボタン部分のJSXも削除 */}
         <div className="timeline">
           <div className="timeline-track" />
           {/* イベント時間帯のハイライト */}
@@ -263,6 +220,9 @@ function TimeRangeSlider({
             );
           })}
           <div className="selection-range" style={{ left: `${(sliderValue[0]/timeSlots.length)*100}%`, width: `${((sliderValue[1]-sliderValue[0])/timeSlots.length)*100}%` }} />
+          {/* 再生ボタンや再生状態に関するuseState, 関数, UI, props, useRef, useEffect, および関連ロジックを削除
+          // 例: isPlaying, currentFrameIndex, playbackSpeed, playbackIntervalRef, handlePlayButtonClick, getCurrentPlaybackPosition, onPlayStateChange など
+          // タイムラインの再生ボタン部分のJSXも削除 */}
           {getCurrentPlaybackPosition() && (
             <div className="playback-position-indicator" style={{ left: `${getCurrentPlaybackPosition()!.position}%` }}>
               <div className="playback-needle" />
@@ -276,7 +236,7 @@ function TimeRangeSlider({
             valueLabelDisplay="auto"
             min={0}
             max={timeSlots.length - 1}
-            disabled={isPlaying || loadingData}
+            disabled={loadingData}
             valueLabelFormat={formatTimeLabel}
             step={1}
             disableSwap

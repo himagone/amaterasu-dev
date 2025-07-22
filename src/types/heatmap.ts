@@ -100,6 +100,8 @@ interface demographics {
   ageGroups: Record<string, number>;
   /** 職業カテゴリごとの件数 */
   jobCategories: Record<string, number>;
+  /** 都道府県ごとの件数 */
+  address: Record<string, number>;
   /** 交通手段ごとの件数 */
   transportationMethods: Record<string, number>;
 }
