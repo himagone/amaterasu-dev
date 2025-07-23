@@ -282,6 +282,13 @@ function App() {
         getFillColor: (d: eventParticipanth3Cells) => {
           const value = d.count || 0;
           const intensity = (value / maxCount) * 255; // 最大値に基づく強度計算
+          
+          // activitytypeが"still"でavgStayMinutesが10以上の場合、青色で表示
+          if (d.dominantActivityType === 'still' && d.avgStayMinutes >= 10) {
+            return [0, 0, 255, intensity]; // 青色で強度を表現
+          }
+          
+          // それ以外の場合は赤色で表示
           return [255, 0, 0, intensity]; // 赤色で強度を表現
         },
         getLineColor: [255, 255, 255, 200], // 白い枠線
