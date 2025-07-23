@@ -46,18 +46,10 @@ export const createHeatmapLayer = (
     opacity = 0.8,
     visible = true
   } = config;
-
-  console.log(`Creating heatmap layer with ${data.length} data points`);
-  
   // データの統計情報をログ出力
   if (data.length > 0) {
     const intensities = data.map(d => d.intensity || 0);
     const values = data.map(d => d.value || 0);
-    console.log('Data statistics:', {
-      points: data.length,
-      intensityRange: [Math.min(...intensities), Math.max(...intensities)],
-      valueRange: [Math.min(...values), Math.max(...values)]
-    });
   }
 
   return new HeatmapLayer({

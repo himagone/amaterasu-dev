@@ -12,6 +12,7 @@ type Props = {
   selectedDateTime?: Date;
   deckOverlay: any;
   onZoomChange?: (zoom: number) => void;
+  onBoundsChange?: (bounds: { north: number; south: number; east: number; west: number }) => void;
   showHeatmapLayer?: boolean;
   mapInstance?: any;
   setMapInstance?: (instance: any) => void;
@@ -50,7 +51,6 @@ function Map(props: Props) {
 
     if (map.current) {
       map.current.on('load', () => {
-        console.log('Map loaded');
         setMapLoaded(true);
         
         // マップインスタンスを親コンポーネントに通知
@@ -73,6 +73,23 @@ function Map(props: Props) {
           const currentZoom = map.current.getZoom();
           if (currentZoom !== undefined) {
             props.onZoomChange(currentZoom);
+          }
+        }
+      });
+
+      // 地図の移動が終了した際のイベントリスナーを追加
+      map.current.on('moveend', () => {
+        if (props.onBoundsChange && map.current) {
+          try {
+            const bounds = map.current.getBounds();
+            props.onBoundsChange({
+              north: bounds.getNorth(),
+              south: bounds.getSouth(),
+              east: bounds.getEast(),
+              west: bounds.getWest()
+            });
+          } catch (error) {
+            console.warn('Failed to get map bounds:', error);
           }
         }
       });

@@ -13,7 +13,20 @@ import { getHeatmapTimeseriesData, getHeatmapEventParticipant } from './utils/ge
 import { heatmapPoints, eventParticipanth3Cells, ParticipantSummary } from './types/heatmap'
 import getDemographicData from './utils/getDemographicData'
 import { DemographicFilters, DemographicPoint } from './types/demographicData'
+import { getBoundingBoxDemographics, BoundingBoxDemographicsResponse } from './utils/getBoundingBoxDemographics'
 import { TryRounded } from '@mui/icons-material'
+
+// 日時を YYYY-MM-DDTHH:mm:ss 形式にフォーマット
+const formatDateTime = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  const hours = date.getHours().toString().padStart(2, '0');
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  const seconds = date.getSeconds().toString().padStart(2, '0');
+  
+  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+};
 
 function App() {
   // デフォルトの時間範囲を設定（過去24時間のデータ）
@@ -38,11 +51,75 @@ function App() {
 
   const [eventParticipantData, setEventParticipantData] = useState<eventParticipanth3Cells[]>([]);
   const [participantSummary, setParticipantSummary] = useState<ParticipantSummary | null>(null);
+  const [boundingBoxDemographics, setBoundingBoxDemographics] = useState<BoundingBoxDemographicsResponse | null>(null);
 
 
   // デバウンス用のタイマーRef
   const zoomDebounceTimer = useRef<NodeJS.Timeout | null>(null);
   const dateRangeDebounceTimer = useRef<NodeJS.Timeout | null>(null);
+
+  // 境界ボックス人口統計データを取得する関数
+  const fetchBoundingBoxDemographics = useCallback(async (start: Date, end: Date) => {
+    try {
+      // 地図の表示範囲を取得
+      let bbox = null;
+      const currentMapInstance = mapInstanceRef.current || mapInstance;
+      if (currentMapInstance && currentMapInstance.getBounds) {
+        try {
+          const mapBounds = currentMapInstance.getBounds();
+          bbox = {
+            minLat: mapBounds.getSouth(),
+            maxLat: mapBounds.getNorth(),
+            minLng: mapBounds.getWest(),
+            maxLng: mapBounds.getEast()
+          };
+        } catch (error) {
+          console.warn('Failed to get map bounds:', error);
+          // デフォルトのBBOXを設定
+          bbox = {
+            minLat: 34.3800,
+            maxLat: 34.3900,
+            minLng: 132.4500,
+            maxLng: 132.4600
+          };
+        }
+      } else {
+        // デフォルトのBBOXを設定
+        bbox = {
+          minLat: 34.3800,
+          maxLat: 34.3900,
+          minLng: 132.4500,
+          maxLng: 132.4600
+        };
+      }
+
+      // 固定値の設定
+      const venueLat = 34.35370012;
+      const venueLng = 134.0459301;
+      const radiusMeters = 200;
+      const eventTimeSlots = [
+        {
+          startTime: "2025-03-01T16:00:00",
+          endTime: "2025-03-01T19:00:00"
+        }
+      ];
+
+      const data = await getBoundingBoxDemographics(
+        venueLat,
+        venueLng,
+        radiusMeters,
+        eventTimeSlots,
+        formatDateTime(start),
+        formatDateTime(end),
+        bbox
+      );
+
+      setBoundingBoxDemographics(data);
+
+    } catch (error) {
+      console.error('境界ボックス人口統計データ取得エラー:', error);
+    }
+  }, []);
 
   // ズームレベル変更時のデバウンス処理
   const handleZoomChange = useCallback((newZoom: number) => {
@@ -54,8 +131,21 @@ function App() {
     // 新しいタイマーを設定（500ms後に実行）
     zoomDebounceTimer.current = setTimeout(() => {
       setCurrentZoom(newZoom);
+      
+      // 境界ボックスデータが存在する場合、新しいBBOXでデータを更新
+      if (boundingBoxDemographics && dateRange) {
+        fetchBoundingBoxDemographics(dateRange.start, dateRange.end);
+      }
     }, 500);
-  }, []);
+  }, [boundingBoxDemographics, dateRange, fetchBoundingBoxDemographics]);
+
+  // 地図の境界変更時のデバウンス処理
+  const handleBoundsChange = useCallback((bounds: { north: number; south: number; east: number; west: number }) => {
+    // 境界ボックスデータが存在する場合、新しいBBOXでデータを更新
+    if (boundingBoxDemographics && dateRange) {
+      fetchBoundingBoxDemographics(dateRange.start, dateRange.end);
+    }
+  }, [boundingBoxDemographics, dateRange]);
 
   // クリーンアップ処理
   useEffect(() => {
@@ -159,13 +249,6 @@ function App() {
     }
 
     try {
-      console.log('人口統計フィルター適用開始:', {
-        dateRange: {
-          start: dateRange.start.toLocaleString('ja-JP'),
-          end: dateRange.end.toLocaleString('ja-JP')
-        },
-        filtersCount: Object.values(demographicFilters).reduce((sum, arr) => sum + arr.length, 0)
-      });
 
       const data = await getDemographicData(
         demographicFilters,
@@ -207,7 +290,11 @@ function App() {
         filled: true,
         extruded: false,
         opacity: 0.6,
-        pickable: true
+        pickable: true,
+        // ピック可能なオブジェクトにデータを追加
+        getPickable: () => true,
+        // データオブジェクトをそのまま使用
+        _lighting: 'pbr'
       });
       layerList.push(eventLayer);
     }
@@ -243,6 +330,8 @@ function App() {
 
     return layerList;
   }, [eventParticipantData, showDemographicLayer, demographicPointData]);
+
+
 
   // Deck.glオーバーレイの作成
   const deckOverlay = useMemo(() => {
@@ -287,22 +376,19 @@ function App() {
             };
           }
           // H3ヒートマップの場合
-          else if (info.object.h3_index) {
+          else if (info.object.h3Index || info.object.h3_index || info.object.count !== undefined) {
+            // デバッグ用：オブジェクトの内容をコンソールに出力
+            const count = info.object.count || info.object.person_count || 'N/A';
+            const avgStayMinutes = info.object.avgStayMinutes;
+            const dominantActivityType = info.object.dominantActivityType;
             return {
               html: `
                 <div style="padding: 8px; background: rgba(0,0,0,0.8); color: white; border-radius: 4px;">
-                  <div style="font-weight: bold; color: #ff9800; margin-bottom: 4px;">📊 密度ヒートマップ</div>
-                  <div><strong>H3インデックス:</strong> ${info.object.h3_index}</div>
-                  <div><strong>人数:</strong> ${info.object.person_count || info.object.count}</div>
-                  <div><strong>時刻:</strong> ${new Date(info.object.time).toLocaleString('ja-JP')}</div>
-                  <div><strong>位置:</strong> ${info.object.lat?.toFixed(6)}, ${info.object.lng?.toFixed(6)}</div>
+                  <div><strong>人数:</strong> ${count}</div>
+                  <div><strong>平均滞在時間:</strong> ${avgStayMinutes}分</div>
+                  ${dominantActivityType ? `<div><strong>アクティビティタイプ:</strong> ${dominantActivityType}</div>` : ''}
                 </div>
               `,
-              style: {
-                backgroundColor: 'transparent',
-                border: 'none',
-                color: 'white'
-              }
             };
           }
         }
@@ -337,6 +423,9 @@ function App() {
       );
       setParticipantSummary(participantSummary);
       setEventParticipantData(cells);
+
+      // 境界ボックス人口統計データも同時に取得
+      await fetchBoundingBoxDemographics(start, end);
     } catch (error) {
       console.error('Error fetching event participant data:', error);
     } finally {
@@ -358,6 +447,7 @@ function App() {
                 selectedDateTime={selectedDateTime}
                 deckOverlay={deckOverlay}
                 onZoomChange={handleZoomChange}
+                onBoundsChange={handleBoundsChange}
                 mapInstance={mapInstance}
                 setMapInstance={handleSetMapInstance}
               />
@@ -367,7 +457,10 @@ function App() {
             {/* 参加者サマリー - サイドパネル */}
             {participantSummary && (
               <div className="participant-summary-panel">
-                <ParticipantSummaryComponent data={participantSummary} />
+                <ParticipantSummaryComponent 
+                  data={participantSummary} 
+                  boundingBoxData={boundingBoxDemographics}
+                />
               </div>
             )}
           </div>

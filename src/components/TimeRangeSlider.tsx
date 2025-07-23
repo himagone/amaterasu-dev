@@ -62,20 +62,7 @@ function TimeRangeSlider({
 
   // デバッグ: timeseriesDataの変化を監視
   useEffect(() => {
-    console.log('🎬 TimeRangeSlider: timeseriesData updated', {
-      length: timeseriesData.length,
-      isLoading,
-    });
   }, [timeseriesData, isLoading]);
-
-  // ミューテート安全: コンポーネントアンマウント時にタイマークリア
-  useEffect(() => {
-    return () => {
-      // 再生ボタンや再生状態に関するuseState, 関数, UI, props, useRef, useEffect, および関連ロジックを削除
-      // 例: isPlaying, currentFrameIndex, playbackSpeed, playbackIntervalRef, handlePlayButtonClick, getCurrentPlaybackPosition, onPlayStateChange など
-      // タイムラインの再生ボタン部分のJSXも削除
-    };
-  }, []);
 
   // スロットを日本語でフォーマット
   const getJapaneseWeekday = (date: Date) => ['日','月','火','水','木','金','土'][date.getDay()];
@@ -108,10 +95,6 @@ function TimeRangeSlider({
       }
     }
   };
-
-  // 再生ボタンや再生状態に関するuseState, 関数, UI, props, useRef, useEffect, および関連ロジックを削除
-  // 例: isPlaying, currentFrameIndex, playbackSpeed, playbackIntervalRef, handlePlayButtonClick, getCurrentPlaybackPosition, onPlayStateChange など
-  // タイムラインの再生ボタン部分のJSXも削除
 
   // 選択表示テキスト
   const getSelectionText = () => {
@@ -171,9 +154,6 @@ function TimeRangeSlider({
         <span className="selection-text">{getSelectionText()}</span>
       </div>
       <div className="timeline-container">
-        {/* 再生ボタンや再生状態に関するuseState, 関数, UI, props, useRef, useEffect, および関連ロジックを削除
-        // 例: isPlaying, currentFrameIndex, playbackSpeed, playbackIntervalRef, handlePlayButtonClick, getCurrentPlaybackPosition, onPlayStateChange など
-        // タイムラインの再生ボタン部分のJSXも削除 */}
         <div className="timeline">
           <div className="timeline-track" />
           {/* イベント時間帯のハイライト */}
@@ -220,9 +200,6 @@ function TimeRangeSlider({
             );
           })}
           <div className="selection-range" style={{ left: `${(sliderValue[0]/timeSlots.length)*100}%`, width: `${((sliderValue[1]-sliderValue[0])/timeSlots.length)*100}%` }} />
-          {/* 再生ボタンや再生状態に関するuseState, 関数, UI, props, useRef, useEffect, および関連ロジックを削除
-          // 例: isPlaying, currentFrameIndex, playbackSpeed, playbackIntervalRef, handlePlayButtonClick, getCurrentPlaybackPosition, onPlayStateChange など
-          // タイムラインの再生ボタン部分のJSXも削除 */}
           {getCurrentPlaybackPosition() && (
             <div className="playback-position-indicator" style={{ left: `${getCurrentPlaybackPosition()!.position}%` }}>
               <div className="playback-needle" />

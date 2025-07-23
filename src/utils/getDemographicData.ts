@@ -143,14 +143,6 @@ export const getDemographicData = async (
   signal?: AbortSignal
 ): Promise<DemographicPoint[]> => {
   try {
-    console.log('人口統計データを取得中...', {
-      dateRange: {
-        start: dateRange.start.toLocaleString('ja-JP'),
-        end: dateRange.end.toLocaleString('ja-JP')
-      },
-      filtersCount: Object.values(filters).reduce((sum, arr) => sum + arr.length, 0)
-    });
-
     // ヒートマップと同じ時間処理を使用
     const heatmapRequest = buildHeatmapRequest(dateRange.start, dateRange.end, zoomLevel, bounds);
 
@@ -175,8 +167,6 @@ export const getDemographicData = async (
       }
     };
 
-    console.log('APIリクエストボディ:', JSON.stringify(requestBody, null, 2));
-
     const response = await fetch(`${DEMOGRAPHIC_API_BASE_URL}/api/v1/points`, {
       method: 'POST',
       headers: {
@@ -192,17 +182,14 @@ export const getDemographicData = async (
 
     const responseData = await response.json();
     const data: DemographicPoint[] = responseData.points || [];
-    console.log('取得されたデータ件数:', data.length);
 
     return data;
 
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
-      console.log('人口統計データ取得がキャンセルされました');
       throw error;
     }
     
-    console.error('人口統計データ取得エラー:', error);
     
     throw new Error(
       error instanceof Error 

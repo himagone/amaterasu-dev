@@ -83,7 +83,6 @@ export const getHeatmapData = async (
 
 // ヒートマップのタイムシリーズデータを取得
 const fetchHeatmapTimeseries = async (url: string, requestParam: heatmapTimeseriesRequestParam, signal?: AbortSignal): Promise<heatmapTimeseriesResponse> => {
-  console.log('Sending heatmap timeseries request:', requestParam);
 
   const response = await fetch(url, {
     method: 'POST',
@@ -143,7 +142,6 @@ export const getHeatmapTimeseriesData = async (
 };
 
 const fetchHeatmapEventParticipant = async (url: string, requestParam: heatmapEventParticipantRequestParam): Promise<heatmapEventParticipantResponse> => {
-  console.log('EVENT PARAM:', requestParam);
 
   const response = await fetch(url, {
     method: 'POST',
@@ -177,7 +175,7 @@ export const getHeatmapEventParticipant = async (
     eventTimeSlots: [
       {
         startTime: "2025-03-01T16:00:00",
-        endTime: "2025-03-01T17:00:00"
+        endTime: "2025-03-01T19:00:00"
       }
     ],
     zoom: zoom,
