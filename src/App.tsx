@@ -9,6 +9,7 @@ import { ScatterplotLayer } from '@deck.gl/layers';
 import TimeRangeSlider from './components/TimeRangeSlider'
 import MarketingInsights from './components/MarketingInsights'
 import ParticipantSummaryComponent from './components/ParticipantSummary'
+import EventTimeSelector, { EventTimeSlot } from './components/EventTimeSelector'
 import { getHeatmapTimeseriesData, getHeatmapEventParticipant } from './utils/getHeatmap'
 import { heatmapPoints, eventParticipanth3Cells, ParticipantSummary } from './types/heatmap'
 import getDemographicData from './utils/getDemographicData'
@@ -52,6 +53,18 @@ function App() {
   const [eventParticipantData, setEventParticipantData] = useState<eventParticipanth3Cells[]>([]);
   const [participantSummary, setParticipantSummary] = useState<ParticipantSummary | null>(null);
   const [boundingBoxDemographics, setBoundingBoxDemographics] = useState<BoundingBoxDemographicsResponse | null>(null);
+  
+  // イベント時間スロットの状態
+  const [selectedEventTimeSlots, setSelectedEventTimeSlots] = useState<EventTimeSlot[]>([
+    {
+      startTime: "2025-03-01T16:00:00",
+      endTime: "2025-03-01T19:00:00"
+    },
+    {
+      startTime: "2025-03-02T15:30:00",
+      endTime: "2025-03-02T18:30:00"
+    }
+  ]);
 
 
   // デバウンス用のタイマーRef
@@ -97,18 +110,12 @@ function App() {
       const venueLat = 34.35370012;
       const venueLng = 134.0459301;
       const radiusMeters = 200;
-      const eventTimeSlots = [
-        {
-          startTime: "2025-03-01T16:00:00",
-          endTime: "2025-03-01T19:00:00"
-        }
-      ];
 
       const data = await getBoundingBoxDemographics(
         venueLat,
         venueLng,
         radiusMeters,
-        eventTimeSlots,
+        selectedEventTimeSlots,
         formatDateTime(start),
         formatDateTime(end),
         bbox
@@ -119,7 +126,7 @@ function App() {
     } catch (error) {
       console.error('境界ボックス人口統計データ取得エラー:', error);
     }
-  }, []);
+  }, [selectedEventTimeSlots]);
 
   // ズームレベル変更時のデバウンス処理
   const handleZoomChange = useCallback((newZoom: number) => {
@@ -208,6 +215,18 @@ function App() {
     setSelectedTransportationMode(mode);
     setSelectedActivityTypes(activityTypes);
   };
+
+  // イベント時間スロットの変更ハンドラー
+  const handleEventTimeSlotsChange = (slots: EventTimeSlot[]) => {
+    setSelectedEventTimeSlots(slots);
+  };
+
+  // イベント時間スロット変更時のデータ再取得
+  useEffect(() => {
+    if (dateRange) {
+      fetchEventParticipantData(dateRange.start, dateRange.end);
+    }
+  }, [selectedEventTimeSlots]);
 
   // 人口統計フィルター処理関数
   const handleDemographicFiltersChange = (filters: DemographicFilters) => {
@@ -425,6 +444,7 @@ function App() {
         start,
         end,
         currentZoom, // ズームレベル
+        selectedEventTimeSlots, // イベント時間スロット
         200, // 半径200m
         30 // 滞在時間30分
       );
@@ -486,6 +506,12 @@ function App() {
             onPlayStateChange={handlePlayStateChange}
             timeseriesData={timeseriesData}
             isLoading={isTimeseriesLoading}
+          />
+
+          {/* イベント時間選択 - フローティングパネル */}
+          <EventTimeSelector
+            onEventTimeSlotsChange={handleEventTimeSlotsChange}
+            selectedDay="both"
           />
         </div>
       </div>

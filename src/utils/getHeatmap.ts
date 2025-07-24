@@ -164,6 +164,7 @@ export const getHeatmapEventParticipant = async (
   startDate: Date,
   endDate: Date,
   zoom: number,
+  eventTimeSlots: { startTime: string; endTime: string }[],
   radiusMeters: number = 100, // 半径デフォルト200m
   minStillCount: number = 10, // stillの最小カウントデフォルト3
 ): Promise<heatmapEventParticipantResponse> => {
@@ -172,12 +173,7 @@ export const getHeatmapEventParticipant = async (
     analysisEndTime: formatDateTime(endDate),
     venueLat: 34.35370012,
     venueLng: 134.0459301,
-    eventTimeSlots: [
-      {
-        startTime: "2025-03-01T16:00:00",
-        endTime: "2025-03-01T19:00:00"
-      }
-    ],
+    eventTimeSlots: eventTimeSlots,
     zoom: zoom,
     radiusMeters: radiusMeters,
     minStillCount: minStillCount
