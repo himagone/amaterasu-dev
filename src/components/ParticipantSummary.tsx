@@ -362,14 +362,14 @@ const ParticipantSummaryComponent: React.FC<ParticipantSummaryProps> = ({
             className={`tab-button ${activeTab === 'all' ? 'active' : ''}`}
             onClick={() => setActiveTab('all')}
           >
-            総参加者数 ({data.totalParticipants}人)
+            全範囲 ({data.totalParticipants}人)
           </button>
           {boundingBoxData && (
             <button 
               className={`tab-button ${activeTab === 'boundingBox' ? 'active' : ''}`}
               onClick={() => setActiveTab('boundingBox')}
             >
-              表示中の人数 ({boundingBoxData.analysisSummary.totalBoundingBoxUsers}人)
+              表示中 ({boundingBoxData.analysisSummary.totalBoundingBoxUsers}人)
             </button>
           )}
         </div>

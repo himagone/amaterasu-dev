@@ -173,7 +173,7 @@ function TimeRangeSlider({
                   position: 'absolute',
                   top: 0,
                   height: '100%',
-                  background: 'rgba(255, 193, 7, 0.25)', // 黄色系半透明
+                  background: 'rgba(255, 193, 7, 0.35)', // 黄色系半透明
                   borderRadius: 4,
                   pointerEvents: 'none',
                   zIndex: 1,
@@ -224,12 +224,15 @@ function TimeRangeSlider({
               <div key={idx} className="date-group">
                 <div className="hour-markers">
                   {Array.from({ length: 24 }).map((_, h) => (
-                    <div key={h} className={`hour-marker ${h%6===0?'major':''}`}>{h%12===0 && <span>{h}:00</span>}</div>
+                    <div key={h} className={`hour-marker ${h%4===0?'major':''}`}>
+                      {h%4===0 && (
+                        <div className="time-label">
+                          <span className="hour-number">{h === 0 ? 12 : h}</span>
+                          <span className="am-pm">{h < 12 ? 'AM' : 'PM'}</span>
+                        </div>
+                      )}
+                    </div>
                   ))}
-                </div>
-                <div className="date-label">
-                  <div className="month-day">{date.getMonth()+1}/{date.getDate()}</div>
-                  <div className="weekday">{getJapaneseWeekday(date)}</div>
                 </div>
               </div>
             ))}
