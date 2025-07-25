@@ -11,11 +11,13 @@ import MarketingInsights from './components/MarketingInsights'
 import ParticipantSummaryComponent from './components/ParticipantSummary'
 import EventTimeSelector, { EventTimeSlot } from './components/EventTimeSelector'
 import { getHeatmapTimeseriesData, getHeatmapEventParticipant } from './utils/getHeatmap'
-import { heatmapPoints, eventParticipanth3Cells, ParticipantSummary } from './types/heatmap'
+import { heatmapPoints, eventParticipanth3Cells, ParticipantSummary, CongestionPoint, CongestionSummary } from './types/heatmap'
 import getDemographicData from './utils/getDemographicData'
 import { DemographicFilters, DemographicPoint } from './types/demographicData'
 import { getBoundingBoxDemographics, BoundingBoxDemographicsResponse } from './utils/getBoundingBoxDemographics'
+import { getCongestionPoints } from './utils/getCongestionPoints'
 import { TryRounded } from '@mui/icons-material'
+import CongestionPoints from './components/CongestionPoints'
 
 // 日時を YYYY-MM-DDTHH:mm:ss 形式にフォーマット
 const formatDateTime = (date: Date): string => {
@@ -196,6 +198,16 @@ function App() {
   const [selectedTransportationMode, setSelectedTransportationMode] = useState<string>('walking');
   const [selectedActivityTypes, setSelectedActivityTypes] = useState<string[]>(['on_foot', 'walking', 'running', 'still']);
 
+  // 混雑ポイント関連のstate
+  const [showCongestionPoints, setShowCongestionPoints] = useState<boolean>(false);
+  const [congestionData, setCongestionData] = useState<{
+    topPoints: CongestionPoint[];
+    summary: CongestionSummary;
+    executionTimeMs: number;
+  } | null>(null);
+  const [isCongestionLoading, setIsCongestionLoading] = useState<boolean>(false);
+  const [congestionError, setCongestionError] = useState<string | null>(null);
+
   // タイムシリーズデータの更新処理
   const handleTimeseriesDataUpdate = (data: {timestamp: string, points: heatmapPoints[]}[]) => {
     setTimeseriesData(data);
@@ -219,6 +231,63 @@ function App() {
   // イベント時間スロットの変更ハンドラー
   const handleEventTimeSlotsChange = (slots: EventTimeSlot[]) => {
     setSelectedEventTimeSlots(slots);
+  };
+
+  // 混雑ポイント表示切り替えハンドラー
+  const handleToggleCongestionPoints = async () => {
+    if (!showCongestionPoints) {
+      // 混雑ポイントデータを取得
+      setIsCongestionLoading(true);
+      setCongestionError(null);
+      try {
+        // 地図の表示範囲を取得
+        let bbox = null;
+        const currentMapInstance = mapInstanceRef.current || mapInstance;
+        if (currentMapInstance && currentMapInstance.getBounds) {
+          try {
+            const mapBounds = currentMapInstance.getBounds();
+            bbox = {
+              minLat: mapBounds.getSouth(),
+              maxLat: mapBounds.getNorth(),
+              minLng: mapBounds.getWest(),
+              maxLng: mapBounds.getEast()
+            };
+          } catch (error) {
+            console.warn('Failed to get map bounds:', error);
+            // デフォルトのBBOXを設定
+            bbox = {
+              minLat: 34.3800,
+              maxLat: 34.3900,
+              minLng: 132.4500,
+              maxLng: 132.4600
+            };
+          }
+        } else {
+          // デフォルトのBBOXを設定
+          bbox = {
+            minLat: 34.3800,
+            maxLat: 34.3900,
+            minLng: 132.4500,
+            maxLng: 132.4600
+          };
+        }
+
+        const data = await getCongestionPoints(
+          formatDateTime(dateRange.start),
+          formatDateTime(dateRange.end),
+          currentZoom,
+          ['still'],
+          bbox
+        );
+        setCongestionData(data);
+      } catch (error) {
+        console.error('混雑ポイントデータ取得エラー:', error);
+        setCongestionError(error instanceof Error ? error.message : '混雑ポイントデータの取得に失敗しました');
+      } finally {
+        setIsCongestionLoading(false);
+      }
+    }
+    setShowCongestionPoints(!showCongestionPoints);
   };
 
   // イベント時間スロット変更時のデータ再取得
@@ -302,13 +371,13 @@ function App() {
           const value = d.count || 0;
           const intensity = (value / maxCount) * 255; // 最大値に基づく強度計算
           
-          // activitytypeが"still"でavgStayMinutesが10以上の場合、青色で表示
+          // activitytypeが"still"でavgStayMinutesが10以上の場合、紫色で表示
           if (d.dominantActivityType === 'still' && d.avgStayMinutes >= 10) {
-            return [0, 0, 255, intensity]; // 青色で強度を表現
+            return [147, 51, 234, intensity]; // 紫色で強度を表現
           }
           
-          // それ以外の場合は赤色で表示
-          return [255, 0, 0, intensity]; // 赤色で強度を表現
+          // それ以外の場合は緑色で表示
+          return [34, 197, 94, intensity]; // 緑色で強度を表現
         },
         getLineColor: [255, 255, 255, 200], // 白い枠線
         getLineWidth: 1,
@@ -354,8 +423,37 @@ function App() {
       layerList.push(demographicLayer);
     }
 
+    // 混雑ポイントレイヤー
+    if (showCongestionPoints && congestionData && congestionData.topPoints.length > 0) {
+      const maxValue = Math.max(...congestionData.topPoints.map((point: CongestionPoint) => point.value));
+      const congestionLayer = new H3HexagonLayer({
+        id: 'congestion-points',
+        data: congestionData.topPoints,
+        getHexagon: (d: CongestionPoint) => d.h3Index,
+        getFillColor: (d: CongestionPoint) => {
+          // 混雑度に応じて色を調整
+          const ratio = d.value / maxValue;
+          if (ratio >= 0.8) return [211, 47, 47, 255];    // 赤
+          if (ratio >= 0.6) return [245, 124, 0, 255];    // オレンジ
+          if (ratio >= 0.4) return [251, 192, 45, 255];   // 黄色
+          if (ratio >= 0.2) return [124, 179, 66, 255];   // 緑
+          return [76, 175, 80, 255];                      // 薄緑
+        },
+        getLineColor: [255, 255, 255, 200],  // 白い枠線
+        getLineWidth: 1,
+        stroked: true,
+        filled: true,
+        extruded: false,
+        opacity: 0.7,
+        pickable: true,
+        _lighting: 'pbr'
+      });
+
+      layerList.push(congestionLayer);
+    }
+
     return layerList;
-  }, [eventParticipantData, showDemographicLayer, demographicPointData]);
+  }, [eventParticipantData, showDemographicLayer, demographicPointData, showCongestionPoints, congestionData]);
 
 
 
@@ -370,8 +468,104 @@ function App() {
       interleaved: true,
       getTooltip: (info: any) => {
         if (info.object) {
+          // 混雑ポイントの場合
+          if (info.object.peakTimes && info.object.emptyTimes) {
+            const point = info.object as CongestionPoint;
+            const formatTime = (timeString: string): string => {
+              const date = new Date(timeString);
+              return date.toLocaleString('ja-JP', {
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+              });
+            };
+            
+            const formatDuration = (minutes: number): string => {
+              if (minutes < 60) {
+                return `${minutes}分`;
+              }
+              const hours = Math.floor(minutes / 60);
+              const remainingMinutes = minutes % 60;
+              return remainingMinutes > 0 ? `${hours}時間${remainingMinutes}分` : `${hours}時間`;
+            };
+
+            const getCongestionLevel = (value: number, maxValue: number): string => {
+              const ratio = value / maxValue;
+              if (ratio >= 0.8) return '非常に混雑';
+              if (ratio >= 0.6) return '混雑';
+              if (ratio >= 0.4) return 'やや混雑';
+              if (ratio >= 0.2) return '少し混雑';
+              return '空いている';
+            };
+
+            const congestionLevel = getCongestionLevel(point.value, point.maxValue);
+            const levelColor = congestionLevel === '非常に混雑' ? '#d32f2f' : 
+                              congestionLevel === '混雑' ? '#f57c00' : 
+                              congestionLevel === 'やや混雑' ? '#fbc02d' : 
+                              congestionLevel === '少し混雑' ? '#7cb342' : '#4caf50';
+
+            return {
+              html: `
+                <div style="padding: 12px; background: rgba(0,0,0,0.9); color: white; border-radius: 8px; min-width: 300px; max-width: 400px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                  <div style="font-weight: bold; color: #667eea; margin-bottom: 8px; font-size: 16px;">混雑情報</div>
+                  
+                  <div style="margin-bottom: 12px; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 6px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                      <span style="font-weight: 600;">総来訪者数:</span>
+                      <span style="font-weight: bold; color: #ffd700;">${point.value.toLocaleString()}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                      <span style="font-weight: 600;">ピーク時来訪者数:</span>
+                      <span>${point.maxValue.toFixed(1)}</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <span style="font-weight: 600;">混雑レベル:</span>
+                      <span style="color: ${levelColor}; font-weight: bold;">${congestionLevel}</span>
+                    </div>
+                  </div>
+
+                  <div style="margin-bottom: 8px;">
+                    <div style="font-weight: 600; color: #ff6b6b; margin-bottom: 4px;">📈 ピーク時間帯</div>
+                    ${point.peakTimes.length > 0 ? 
+                      point.peakTimes.map((peak, index) => `
+                        <div style="margin-bottom: 4px; padding: 4px; background: rgba(255,107,107,0.1); border-radius: 4px; font-size: 12px;">
+                          <div style="display: flex; justify-content: space-between;">
+                            <span>${formatTime(peak.startTime)} - ${formatTime(peak.endTime)}</span>
+                            <span style="color: #ccc;">${formatDuration(peak.durationMinutes)}</span>
+                          </div>
+                          <div style="color: #ff6b6b; font-weight: 600;">混雑度: ${peak.peakValue.toFixed(1)}</div>
+                        </div>
+                      `).join('') : 
+                      '<div style="color: #999; font-style: italic; font-size: 12px;">ピーク時間帯はありません</div>'
+                    }
+                  </div>
+
+                  <div>
+                    <div style="font-weight: 600; color: #51cf66; margin-bottom: 4px;">🕐 空いた時間帯</div>
+                    ${point.emptyTimes.length > 0 ? 
+                      point.emptyTimes.map((empty, index) => `
+                        <div style="margin-bottom: 4px; padding: 4px; background: rgba(81,207,102,0.1); border-radius: 4px; font-size: 12px;">
+                          <div style="display: flex; justify-content: space-between;">
+                            <span>${formatTime(empty.startTime)} - ${formatTime(empty.endTime)}</span>
+                            <span style="color: #ccc;">${formatDuration(empty.durationMinutes)}</span>
+                          </div>
+                        </div>
+                      `).join('') : 
+                      '<div style="color: #999; font-style: italic; font-size: 12px;">空いた時間帯はありません</div>'
+                    }
+                  </div>
+                </div>
+              `,
+              style: {
+                backgroundColor: 'transparent',
+                border: 'none',
+                color: 'white'
+              }
+            };
+          }
           // 人口統計フィルターポイントの場合
-          if (info.object.sex || info.object.birthyear || info.object.job) {
+          else if (info.object.sex || info.object.birthyear || info.object.job) {
             const genderLabel = info.object.sex;
             const currentYear = new Date().getFullYear();
             const age = currentYear - info.object.birthyear;
@@ -413,6 +607,29 @@ function App() {
                   <div><strong>人数:</strong> ${count}</div>
                   <div><strong>平均滞在時間:</strong> ${avgStayMinutes}分</div>
                   ${dominantActivityType ? `<div><strong>アクティビティタイプ:</strong> ${dominantActivityType}</div>` : ''}
+                </div>
+              `,
+            };
+          }
+          // 混雑ポイントの場合
+          else if (info.object.value !== undefined && info.object.peakTimes) {
+            const point = info.object as CongestionPoint;
+            const peakTimes = point.peakTimes.map(peak => 
+              `${new Date(peak.startTime).toLocaleTimeString('ja-JP', {hour: '2-digit', minute: '2-digit'})} - ${new Date(peak.endTime).toLocaleTimeString('ja-JP', {hour: '2-digit', minute: '2-digit'})}`
+            ).join(', ');
+            
+            return {
+              html: `
+                <div style="padding: 8px; background: rgba(0,0,0,0.8); color: white; border-radius: 4px; min-width: 250px;">
+                  <div style="font-weight: bold; color: #ff6b6b; margin-bottom: 4px;">🚦 混雑ポイント</div>
+                  <div><strong>混雑度:</strong> ${point.value.toFixed(1)}</div>
+                  <div><strong>平均混雑度:</strong> ${point.averageValue.toFixed(1)}</div>
+                  <div><strong>最大混雑度:</strong> ${point.maxValue.toFixed(1)}</div>
+                  <div style="margin-top: 4px;"><strong>ピーク時間:</strong></div>
+                  <div style="font-size: 12px; color: #ccc;">${peakTimes}</div>
+                  <div style="margin-top: 4px; font-size: 12px; color: #ccc;">
+                    位置: ${point.lat.toFixed(4)}, ${point.lng.toFixed(4)}
+                  </div>
                 </div>
               `,
             };
@@ -512,7 +729,11 @@ function App() {
           <EventTimeSelector
             onEventTimeSlotsChange={handleEventTimeSlotsChange}
             selectedDay="both"
+            onToggleCongestionPoints={handleToggleCongestionPoints}
+            showCongestionPoints={showCongestionPoints}
           />
+
+          {/* 混雑ポイント分析 - パネルは非表示、地図上のホバーのみ */}
         </div>
       </div>
     </>

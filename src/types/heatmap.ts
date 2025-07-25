@@ -129,3 +129,52 @@ export interface queryFilter {
   operator: string,
   value : string
 }
+
+export interface CongestionPoint {
+  h3Index: string;
+  lat: number;
+  lng: number;
+  value: number;
+  peakTimes: PeakTime[];
+  emptyTimes: EmptyTime[];
+  averageValue: number;
+  maxValue: number;
+}
+
+export interface PeakTime {
+  startTime: string;
+  endTime: string;
+  peakValue: number;
+  durationMinutes: number;
+}
+
+export interface EmptyTime {
+  startTime: string;
+  endTime: string;
+  emptyValue: number;
+  durationMinutes: number;
+}
+
+export interface CongestionSummary {
+  startTime: string;
+  endTime: string;
+  bbox: {
+    minLat: number;
+    maxLat: number;
+    minLng: number;
+    maxLng: number;
+  };
+  h3Resolution: number;
+  totalCells: number;
+  averageCongestion: number;
+  maxCongestion: number;
+  timeIntervalMinutes: number;
+  congestionThreshold: number;
+  emptyThreshold: number;
+}
+
+export interface CongestionResponse {
+  topPoints: CongestionPoint[];
+  summary: CongestionSummary;
+  executionTimeMs: number;
+}

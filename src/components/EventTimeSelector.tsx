@@ -11,11 +11,15 @@ export type EventDaySelection = 'day1' | 'day2' | 'both';
 interface EventTimeSelectorProps {
   onEventTimeSlotsChange: (slots: EventTimeSlot[]) => void;
   selectedDay?: EventDaySelection;
+  onToggleCongestionPoints?: () => void;
+  showCongestionPoints?: boolean;
 }
 
 const EventTimeSelector: React.FC<EventTimeSelectorProps> = ({
   onEventTimeSlotsChange,
-  selectedDay = 'both'
+  selectedDay = 'both',
+  onToggleCongestionPoints,
+  showCongestionPoints = false
 }) => {
   const [currentSelection, setCurrentSelection] = useState<EventDaySelection>(selectedDay);
 
@@ -99,6 +103,18 @@ const EventTimeSelector: React.FC<EventTimeSelectorProps> = ({
           <div className="day-date">3/1-2</div>
         </button>
       </div>
+
+      {/* 混雑ポイント分析ボタン */}
+      {onToggleCongestionPoints && (
+        <div className="congestion-section">
+          <button 
+            onClick={onToggleCongestionPoints}
+            className={`congestion-btn ${showCongestionPoints ? 'active' : ''}`}
+          >
+            {showCongestionPoints ? '🚦 混雑分析を閉じる' : '🚦 混雑ポイント分析'}
+          </button>
+        </div>
+      )}
     </div>
   );
 };
